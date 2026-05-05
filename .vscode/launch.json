@@ -1,0 +1,15 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flutter Prod",
+      "request": "launch",
+      "type": "dart",
+      "toolArgs": [
+        "--dart-define", "SUPABASE_URL=https://tlkcgilleixktrelhsba.supabase.co",
+        "--dart-define", "SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsa2NnaWxsZWl4a3RyZWxoc2JhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4OTg2MTgsImV4cCI6MjA5MzQ3NDYxOH0.3T31V0vT9gYKFSPl9LQysF_ldH86tZhOmej1ZEmlpSk",
+        "--dart-define", "CDN_BASE_URL=https://chae-webtoon.s3.eu-north-1.amazonaws.com"
+      ]
+    }
+  ]
+}
