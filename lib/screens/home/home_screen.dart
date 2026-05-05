@@ -33,12 +33,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadAll() async {
-    _loadFeatured();
-    _loadLatest();
+   if (mounted) setState(() => _error = null);
+   await Future.wait([_loadFeatured(), _loadLatest()]);
   }
 
   Future<void> _loadFeatured() async {
-    setState(() => _loadingFeatured = true);
+    if (mounted) setState(() => _loadingFeatured = true);
     try {
       final data = await _service.fetchFeatured();
       if (mounted) setState(() => _featured = data);
@@ -50,9 +50,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadLatest() async {
-    setState(() => _loadingLatest = true);
+    if (mounted) setState(() => _loadingLatest = true);
+    final showMature = context.read<SettingsProvider>().matureContent;
     try {
-      final showMature = context.read<SettingsProvider>().matureContent;
       final data = await _service.fetchList(showMature: showMature);
       if (mounted) setState(() => _latest = data);
     } catch (e) {
@@ -202,14 +202,31 @@ class _HomeScreenState extends State<HomeScreen> {
             border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
           ),
           child: Row(
+             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Icon(Icons.error_outline, color: AppColors.error),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  'Yüklenirken hata oluştu. Çekmek için aşağı kaydır.',
-                  style: TextStyle(
-                      color: AppColors.error.withValues(alpha: 0.8)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Yüklenirken hata oluştu. Çekmek için aşağı kaydır.',
+                      style: TextStyle(
+                        color: AppColors.error.withValues(alpha: 0.8),
+                        fontWeight: FontWeight.w600),
+                    ),
+                    if (_error != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        _error!,
+                        style: TextStyle(
+                          color: AppColors.error.withValues(alpha: 0.6),
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ],

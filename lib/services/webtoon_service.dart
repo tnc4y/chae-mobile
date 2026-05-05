@@ -26,8 +26,13 @@ class WebtoonService {
     try {
       final from = page * 20;
       var query =
-          _client.from('webtoons').select(_listSelect).eq('is_published', true);
-      if (!showMature) query = query.eq('is_mature', false);
+          _client.from('webtoons').select('''
+            id, title, slug, cover_url, status, type,
+            avg_rating, rating_count, chapter_count,
+            view_count, is_premium, is_featured, release_day,
+            webtoon_genres!inner(genre_id, genre:genres(id, name, color))
+          ''').eq('is_published', true);
+       if (!showMature) query = query.neq('age_rating', 'mature');
       final data = await query
           .order('updated_at', ascending: false)
           .range(from, from + 19);
@@ -82,7 +87,7 @@ class WebtoonService {
               'id, title, slug, cover_url, status, type, avg_rating, webtoon_genres(genre:genres(id, name, color))')
           .eq('is_published', true)
           .ilike('title', '%$query%');
-      if (!showMature) q = q.eq('is_mature', false);
+            if (!showMature) q = q.neq('age_rating', 'mature');
       final data = await q.limit(20);
       return (data as List).map((e) => Webtoon.fromJson(e)).toList();
     } on PostgrestException catch (e) {

@@ -14,6 +14,7 @@ import '../../models/chapter_page.dart';
 import '../../providers/settings_provider.dart';
 import '../../services/chapter_service.dart';
 import 'widgets/reader_comments_sheet.dart';
+import 'widgets/reader_comments_sheet.dart';
 
 class ReaderScreen extends StatefulWidget {
   final String chapterId;
@@ -166,41 +167,34 @@ class _ReaderScreenState extends State<ReaderScreen> {
 
   Widget _buildPageImage(ChapterPage page) {
     final isLocal = page.imageUrl.startsWith('/');
-    if (isLocal) {
-      return Image.file(
-        File(page.imageUrl),
-        fit: BoxFit.fitWidth,
-        width: double.infinity,
-        errorBuilder: (_, __, ___) => AspectRatio(
-          aspectRatio: 3 / 4,
-          child: Container(
-            color: const Color(0xFF1A1A1A),
-            child: const Icon(Icons.broken_image_outlined,
-                color: Colors.white24, size: 48),
-          ),
-        ),
-      );
-    }
-    return CachedNetworkImage(
-      imageUrl: page.imageUrl,
-      fit: BoxFit.fitWidth,
-      width: double.infinity,
-      placeholder: (_, __) => AspectRatio(
-        aspectRatio: page.aspectRatio,
-        child: Shimmer.fromColors(
-          baseColor: const Color(0xFF1A1A1A),
-          highlightColor: const Color(0xFF2A2A2A),
-          child: Container(color: const Color(0xFF1A1A1A)),
-        ),
-      ),
-      errorWidget: (_, __, ___) => AspectRatio(
-        aspectRatio: 3 / 4,
-        child: Container(
-          color: const Color(0xFF1A1A1A),
-          child: const Icon(Icons.broken_image_outlined,
-              color: Colors.white24, size: 48),
-        ),
-      ),
+    return AspectRatio(
+      aspectRatio: page.aspectRatio,
+      child: isLocal
+          ? Image.file(
+              File(page.imageUrl),
+              fit: BoxFit.fill,
+              width: double.infinity,
+              errorBuilder: (_, __, ___) => Container(
+                color: const Color(0xFF1A1A1A),
+                child: const Icon(Icons.broken_image_outlined,
+                    color: Colors.white24, size: 48),
+              ),
+            )
+          : CachedNetworkImage(
+              imageUrl: page.imageUrl,
+              fit: BoxFit.fill,
+              width: double.infinity,
+              placeholder: (_, __) => Shimmer.fromColors(
+                baseColor: const Color(0xFF1A1A1A),
+                highlightColor: const Color(0xFF2A2A2A),
+                child: Container(color: const Color(0xFF1A1A1A)),
+              ),
+              errorWidget: (_, __, ___) => Container(
+                color: const Color(0xFF1A1A1A),
+                child: const Icon(Icons.broken_image_outlined,
+                    color: Colors.white24, size: 48),
+              ),
+            ),
     );
   }
 

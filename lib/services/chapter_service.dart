@@ -61,7 +61,7 @@ class ChapterService {
           .from('chapter_pages')
           .select('id, page_number, image_url, width, height')
           .eq('chapter_id', chapterId)
-          .order('page_number');
+          .order('page_number', ascending: true);
       return (pages as List).map((e) => ChapterPage.fromJson(e)).toList();
     } on AppException {
       rethrow;
