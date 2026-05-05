@@ -8,6 +8,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/context_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../../services/revenuecat_service.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -88,6 +89,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _startPurchaseFlow() async {
     final profileProvider = context.read<ProfileProvider>();
+    final themeProvider = context.read<ThemeProvider>();
     setState(() => _purchaseLoading = true);
 
     try {
@@ -113,6 +115,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (hasPremium) {
         if (!mounted) return;
         await profileProvider.syncPremiumRole(true);
+        await themeProvider.refreshPremiumStatus();
         _showSnackBar('Premium satın alma başarılı.');
       } else {
         _showSnackBar(
@@ -133,6 +136,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _restorePurchases() async {
     final profileProvider = context.read<ProfileProvider>();
+    final themeProvider = context.read<ThemeProvider>();
     setState(() => _purchaseLoading = true);
 
     try {
@@ -144,6 +148,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (hasPremium) {
         if (!mounted) return;
         await profileProvider.syncPremiumRole(true);
+        await themeProvider.refreshPremiumStatus();
         _showSnackBar('Satın alımlar geri yüklendi. Premium aktif.');
       } else {
         _showSnackBar('Geri yüklenecek aktif premium bulunamadı.');

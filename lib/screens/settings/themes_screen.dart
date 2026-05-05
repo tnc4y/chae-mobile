@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_themes.dart';
 import '../../core/theme/context_colors.dart';
@@ -12,9 +13,20 @@ class ThemesScreen extends StatelessWidget {
     final colors = context.colors;
     final themeProvider = context.watch<ThemeProvider>();
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) context.pop();
+      },
+      child: Scaffold(
       backgroundColor: colors.background,
-      appBar: AppBar(title: const Text('Temalar')),
+      appBar: AppBar(
+        title: const Text('Temalar'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          onPressed: () => context.pop(),
+        ),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -98,6 +110,7 @@ class ThemesScreen extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 

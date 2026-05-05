@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../config/app_constants.dart';
 import '../core/theme/app_themes.dart';
 import '../services/revenuecat_service.dart';
 
@@ -19,8 +21,24 @@ class ThemeProvider extends ChangeNotifier {
   }
 
   Future<void> _loadPremiumStatus() async {
+    // RevenueCat configured → use it as source of truth
+    if (RevenueCatService.instance.isConfigured) {
+      try {
+        _premiumUnlocked = await RevenueCatService.instance.hasPremiumAccess();
+        return;
+      } catch (_) {}
+    }
+    // Fallback: check Supabase profile role
     try {
-      _premiumUnlocked = await RevenueCatService.instance.hasPremiumAccess();
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) return;
+      final row = await Supabase.instance.client
+          .from('profiles')
+          .select('role')
+          .eq('id', userId)
+          .maybeSingle();
+      final role = (row?['role'] as String?) ?? '';
+      _premiumUnlocked = AppConstants.premiumRoles.contains(role);
     } catch (_) {
       _premiumUnlocked = false;
     }
