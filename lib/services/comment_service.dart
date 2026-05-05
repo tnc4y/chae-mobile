@@ -7,6 +7,24 @@ class CommentService {
 
   String get _userId => _client.auth.currentUser!.id;
 
+  Future<Set<String>> fetchLikedCommentIds(Iterable<String> commentIds) async {
+    final ids = commentIds.where((id) => id.isNotEmpty).toList();
+    if (ids.isEmpty) return <String>{};
+
+    try {
+      final data = await _client
+          .from('comment_likes')
+          .select('comment_id')
+          .eq('user_id', _userId)
+          .inFilter('comment_id', ids);
+      return (data as List)
+          .map((entry) => entry['comment_id'] as String)
+          .toSet();
+    } on PostgrestException catch (e) {
+      throw ServerException(e.message);
+    }
+  }
+
   Future<List<Comment>> fetchWebtoonComments(
     String webtoonId, {
     int page = 0,

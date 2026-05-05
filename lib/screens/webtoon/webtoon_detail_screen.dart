@@ -65,6 +65,8 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
       final webtoon = await _webtoonService.fetchBySlug(widget.slug);
       final chapters = await _chapterService.fetchChapters(webtoon.id);
       final comments = await _commentService.fetchWebtoonComments(webtoon.id);
+      final likedIds = await _commentService
+          .fetchLikedCommentIds(comments.map((comment) => comment.id));
       final isFav = await _favoriteService.isFavorite(webtoon.id);
       final myRating = await _ratingService.fetchMyRating(webtoon.id);
 
@@ -72,7 +74,11 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
         setState(() {
           _webtoon = webtoon;
           _chapters = chapters;
-          _comments = comments;
+          _comments = comments
+              .map((comment) => comment.copyWith(
+                    isLiked: likedIds.contains(comment.id),
+                  ))
+              .toList();
           _isFavorite = isFav;
           _myRating = myRating;
           _commentsLoading = false;
@@ -87,7 +93,12 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
         );
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _commentsLoading = false;
+        });
+      }
     }
   }
 
@@ -96,8 +107,16 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
     setState(() => _commentsLoading = true);
     try {
       final comments = await _commentService.fetchWebtoonComments(_webtoon!.id);
+      final likedIds = await _commentService
+          .fetchLikedCommentIds(comments.map((comment) => comment.id));
       if (mounted) {
-        setState(() => _comments = comments);
+        setState(() {
+          _comments = comments
+              .map((comment) => comment.copyWith(
+                    isLiked: likedIds.contains(comment.id),
+                  ))
+              .toList();
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -588,10 +607,16 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
               ),
             )
           else
-            ..._comments.map((comment) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: _CommentCard(comment: comment),
-                )),
+            ..._comments.map(
+              (comment) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _CommentThreadCard(
+                  comment: comment,
+                  webtoonId: _webtoon!.id,
+                  service: _commentService,
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -647,14 +672,144 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
   }
 }
 
-class _CommentCard extends StatelessWidget {
+class _CommentThreadCard extends StatefulWidget {
   final Comment comment;
+  final String webtoonId;
+  final CommentService service;
 
-  const _CommentCard({required this.comment});
+  const _CommentThreadCard({
+    required this.comment,
+    required this.webtoonId,
+    required this.service,
+  });
+
+  @override
+  State<_CommentThreadCard> createState() => _CommentThreadCardState();
+}
+
+class _CommentThreadCardState extends State<_CommentThreadCard> {
+  late final TextEditingController _replyController;
+  late bool _isLiked;
+  late int _likeCount;
+  late int _replyCount;
+  List<Comment> _replies = [];
+  bool _showReplies = false;
+  bool _showReplyComposer = false;
+  bool _repliesLoading = false;
+  bool _postingReply = false;
+  bool _loadedReplies = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _replyController = TextEditingController();
+    _isLiked = widget.comment.isLiked;
+    _likeCount = widget.comment.likeCount;
+    _replyCount = widget.comment.replyCount;
+  }
+
+  @override
+  void dispose() {
+    _replyController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _toggleLike() async {
+    final nextLiked = !_isLiked;
+    try {
+      if (nextLiked) {
+        await widget.service.likeComment(widget.comment.id);
+      } else {
+        await widget.service.unlikeComment(widget.comment.id);
+      }
+      if (!mounted) return;
+      setState(() {
+        _isLiked = nextLiked;
+        _likeCount =
+            nextLiked ? _likeCount + 1 : (_likeCount - 1).clamp(0, 1 << 30);
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(e.toString()), backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
+
+  Future<void> _loadReplies() async {
+    if (_loadedReplies || _repliesLoading) return;
+
+    setState(() => _repliesLoading = true);
+    try {
+      final replies = await widget.service.fetchReplies(widget.comment.id);
+      final likedIds = await widget.service
+          .fetchLikedCommentIds(replies.map((comment) => comment.id));
+      if (!mounted) return;
+      setState(() {
+        _replies = replies
+            .map(
+                (reply) => reply.copyWith(isLiked: likedIds.contains(reply.id)))
+            .toList();
+        _loadedReplies = true;
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(e.toString()), backgroundColor: AppColors.error),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _repliesLoading = false);
+    }
+  }
+
+  Future<void> _toggleReplies() async {
+    final next = !_showReplies;
+    setState(() => _showReplies = next);
+    if (next) {
+      await _loadReplies();
+    }
+  }
+
+  Future<void> _postReply() async {
+    final content = _replyController.text.trim();
+    if (content.isEmpty) return;
+
+    setState(() => _postingReply = true);
+    try {
+      await widget.service.postComment(
+        webtoonId: widget.webtoonId,
+        content: content,
+        parentId: widget.comment.id,
+      );
+      _replyController.clear();
+      if (!mounted) return;
+      setState(() {
+        _showReplies = true;
+        _replyCount += 1;
+      });
+      _loadedReplies = false;
+      await _loadReplies();
+      if (!mounted) return;
+      setState(() => _showReplyComposer = false);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(e.toString()), backgroundColor: AppColors.error),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _postingReply = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final avatar = comment.user.avatarUrl;
+    final avatar = widget.comment.user.avatarUrl;
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -662,80 +817,111 @@ class _CommentCard extends StatelessWidget {
         color: AppColors.surfaceContainer,
         borderRadius: BorderRadius.circular(14),
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-            backgroundImage: avatar != null && avatar.isNotEmpty
-                ? NetworkImage(avatar)
-                : null,
-            child: avatar == null || avatar.isEmpty
-                ? Text(
-                    comment.user.displayedName.isNotEmpty
-                        ? comment.user.displayedName[0].toUpperCase()
-                        : '?',
-                    style: const TextStyle(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  )
-                : null,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        comment.user.displayedName,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+                backgroundImage: avatar != null && avatar.isNotEmpty
+                    ? NetworkImage(avatar)
+                    : null,
+                child: avatar == null || avatar.isEmpty
+                    ? Text(
+                        widget.comment.user.displayedName.isNotEmpty
+                            ? widget.comment.user.displayedName[0].toUpperCase()
+                            : '?',
                         style: const TextStyle(
-                          color: AppColors.onBackground,
-                          fontSize: 14,
+                          color: AppColors.primary,
                           fontWeight: FontWeight.w700,
                         ),
-                      ),
-                    ),
-                    Text(
-                      _formatDate(comment.createdAt),
-                      style: const TextStyle(
-                        color: AppColors.onSurfaceDim,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  comment.content,
-                  style: const TextStyle(
-                    color: AppColors.onSurface,
-                    fontSize: 14,
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Row(
+                      )
+                    : null,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.favorite_outline,
-                        size: 14, color: AppColors.onSurfaceDim),
-                    const SizedBox(width: 4),
-                    Text('${comment.likeCount}',
-                        style: const TextStyle(
-                            color: AppColors.onSurfaceDim, fontSize: 12)),
-                    const SizedBox(width: 12),
-                    const Icon(Icons.reply_rounded,
-                        size: 14, color: AppColors.onSurfaceDim),
-                    const SizedBox(width: 4),
-                    Text('${comment.replyCount}',
-                        style: const TextStyle(
-                            color: AppColors.onSurfaceDim, fontSize: 12)),
-                    if (comment.isSpoiler) ...[
-                      const SizedBox(width: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            widget.comment.user.displayedName,
+                            style: const TextStyle(
+                              color: AppColors.onBackground,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          _formatDate(widget.comment.createdAt),
+                          style: const TextStyle(
+                            color: AppColors.onSurfaceDim,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      widget.comment.content,
+                      style: const TextStyle(
+                        color: AppColors.onSurface,
+                        fontSize: 14,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        TextButton.icon(
+                          onPressed: _toggleLike,
+                          icon: Icon(
+                            _isLiked
+                                ? Icons.favorite_rounded
+                                : Icons.favorite_outline,
+                            size: 18,
+                            color: _isLiked
+                                ? AppColors.error
+                                : AppColors.onSurfaceDim,
+                          ),
+                          label: Text('$_likeCount'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.onSurfaceDim,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        TextButton.icon(
+                          onPressed: () => setState(
+                              () => _showReplyComposer = !_showReplyComposer),
+                          icon: const Icon(Icons.reply_rounded, size: 18),
+                          label: const Text('Yanıtla'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.onSurfaceDim,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ),
+                        if (_replyCount > 0) ...[
+                          const SizedBox(width: 6),
+                          TextButton(
+                            onPressed: _toggleReplies,
+                            child: Text(_showReplies
+                                ? 'Yanıtları Gizle ($_replyCount)'
+                                : 'Yanıtları Göster ($_replyCount)'),
+                          ),
+                        ],
+                      ],
+                    ),
+                    if (widget.comment.isSpoiler) ...[
+                      const SizedBox(height: 4),
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 6, vertical: 2),
@@ -754,6 +940,215 @@ class _CommentCard extends StatelessWidget {
                       ),
                     ],
                   ],
+                ),
+              ),
+            ],
+          ),
+          if (_showReplyComposer) ...[
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.only(left: 30),
+              child: Column(
+                children: [
+                  TextField(
+                    controller: _replyController,
+                    maxLines: 3,
+                    minLines: 2,
+                    decoration: const InputDecoration(
+                      hintText: 'Yanıtını yaz...',
+                      filled: true,
+                      fillColor: AppColors.surface,
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: ElevatedButton.icon(
+                      onPressed: _postingReply ? null : _postReply,
+                      icon: const Icon(Icons.send_rounded, size: 18),
+                      label: Text(_postingReply ? 'Gönderiliyor...' : 'Gönder'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (_showReplies) ...[
+            const SizedBox(height: 12),
+            if (_repliesLoading)
+              const Padding(
+                padding: EdgeInsets.only(left: 30, top: 4),
+                child: CircularProgressIndicator(color: AppColors.primary),
+              )
+            else if (_replies.isEmpty)
+              const Padding(
+                padding: EdgeInsets.only(left: 30, top: 4),
+                child: Text(
+                  'Henüz yanıt yok',
+                  style: TextStyle(color: AppColors.onSurfaceDim, fontSize: 12),
+                ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.only(left: 18),
+                child: Column(
+                  children: _replies
+                      .map(
+                        (reply) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: _ReplyCard(
+                            comment: reply,
+                            service: widget.service,
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+    if (diff.inMinutes < 60) return '${diff.inMinutes}dk';
+    if (diff.inHours < 24) return '${diff.inHours}s';
+    if (diff.inDays < 7) return '${diff.inDays}g';
+    return '${date.day}.${date.month}.${date.year}';
+  }
+}
+
+class _ReplyCard extends StatefulWidget {
+  final Comment comment;
+  final CommentService service;
+
+  const _ReplyCard({required this.comment, required this.service});
+
+  @override
+  State<_ReplyCard> createState() => _ReplyCardState();
+}
+
+class _ReplyCardState extends State<_ReplyCard> {
+  late bool _isLiked;
+  late int _likeCount;
+
+  @override
+  void initState() {
+    super.initState();
+    _isLiked = widget.comment.isLiked;
+    _likeCount = widget.comment.likeCount;
+  }
+
+  Future<void> _toggleLike() async {
+    final nextLiked = !_isLiked;
+    try {
+      if (nextLiked) {
+        await widget.service.likeComment(widget.comment.id);
+      } else {
+        await widget.service.unlikeComment(widget.comment.id);
+      }
+      if (!mounted) return;
+      setState(() {
+        _isLiked = nextLiked;
+        _likeCount =
+            nextLiked ? _likeCount + 1 : (_likeCount - 1).clamp(0, 1 << 30);
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(e.toString()), backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final avatar = widget.comment.user.avatarUrl;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surface.withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.outlineVariant),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 14,
+            backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+            backgroundImage: avatar != null && avatar.isNotEmpty
+                ? NetworkImage(avatar)
+                : null,
+            child: avatar == null || avatar.isEmpty
+                ? Text(
+                    widget.comment.user.displayedName.isNotEmpty
+                        ? widget.comment.user.displayedName[0].toUpperCase()
+                        : '?',
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                    ),
+                  )
+                : null,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        widget.comment.user.displayedName,
+                        style: const TextStyle(
+                          color: AppColors.onBackground,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      _formatDate(widget.comment.createdAt),
+                      style: const TextStyle(
+                        color: AppColors.onSurfaceDim,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  widget.comment.content,
+                  style: const TextStyle(
+                    color: AppColors.onSurface,
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                TextButton.icon(
+                  onPressed: _toggleLike,
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.onSurfaceDim,
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  icon: Icon(
+                    _isLiked ? Icons.favorite_rounded : Icons.favorite_outline,
+                    size: 16,
+                    color: _isLiked ? AppColors.error : AppColors.onSurfaceDim,
+                  ),
+                  label: Text('$_likeCount'),
                 ),
               ],
             ),
