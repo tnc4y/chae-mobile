@@ -49,6 +49,29 @@ class CommentService {
     }
   }
 
+  Future<List<Comment>> fetchChapterComments(
+    String chapterId, {
+    int page = 0,
+  }) async {
+    try {
+      final data = await _client
+          .from('comments')
+          .select('''
+            id, content, is_spoiler, is_pinned,
+            like_count, reply_count, created_at, parent_id,
+            user:profiles!comments_user_id_fkey(username, display_name, avatar_url)
+          ''')
+          .eq('chapter_id', chapterId)
+          .eq('is_deleted', false)
+          .isFilter('parent_id', null)
+          .order('created_at', ascending: false)
+          .range(page * 20, page * 20 + 19);
+      return (data as List).map((e) => Comment.fromJson(e)).toList();
+    } on PostgrestException catch (e) {
+      throw ServerException(e.message);
+    }
+  }
+
   Future<List<Comment>> fetchReplies(String commentId) async {
     try {
       final data = await _client
@@ -71,6 +94,7 @@ class CommentService {
     required String content,
     bool isSpoiler = false,
     String? parentId,
+    String? chapterId,
   }) async {
     try {
       await _client.from('comments').insert({
@@ -79,6 +103,7 @@ class CommentService {
         'content': content,
         'is_spoiler': isSpoiler,
         'parent_id': parentId,
+        if (chapterId != null) 'chapter_id': chapterId,
       });
     } on PostgrestException catch (e) {
       throw ServerException(e.message);

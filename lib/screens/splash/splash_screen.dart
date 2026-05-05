@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/context_colors.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -50,8 +50,10 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: colors.background,
       body: Center(
         child: FadeTransition(
           opacity: _fadeAnim,
@@ -64,11 +66,11 @@ class _SplashScreenState extends State<SplashScreen>
                   width: 88,
                   height: 88,
                   decoration: BoxDecoration(
-                    gradient: AppColors.primaryGradient,
+                    gradient: colors.primaryGradient,
                     borderRadius: BorderRadius.circular(22),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.4),
+                        color: colors.primary.withValues(alpha: 0.4),
                         blurRadius: 32,
                         spreadRadius: 4,
                       ),
@@ -83,7 +85,7 @@ class _SplashScreenState extends State<SplashScreen>
                 const SizedBox(height: 20),
                 ShaderMask(
                   shaderCallback: (bounds) =>
-                      AppColors.primaryGradient.createShader(bounds),
+                      colors.primaryGradient.createShader(bounds),
                   child: const Text(
                     'Chae',
                     style: TextStyle(
@@ -95,10 +97,10 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Webtoon Dünyasına Hoş Geldin',
                   style: TextStyle(
-                    color: AppColors.onSurfaceDim,
+                    color: colors.onSurfaceDim,
                     fontSize: 14,
                     letterSpacing: 0.3,
                   ),

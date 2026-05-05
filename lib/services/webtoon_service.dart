@@ -20,13 +20,18 @@ class WebtoonService {
     webtoon_genres(genre:genres(id, name, color))
   ''';
 
-  Future<List<Webtoon>> fetchList({int page = 0}) async {
+  Future<List<Webtoon>> fetchList({
+    int page = 0,
+    bool showMature = false,
+  }) async {
     try {
       final from = page * 20;
-      final data = await _client
+      var query = _client
           .from('webtoons')
           .select(_listSelect)
-          .eq('is_published', true)
+          .eq('is_published', true);
+      if (!showMature) query = query.eq('is_mature', false);
+      final data = await query
           .order('updated_at', ascending: false)
           .range(from, from + 19);
       return (data as List).map((e) => Webtoon.fromJson(e)).toList();
@@ -71,14 +76,15 @@ class WebtoonService {
     }
   }
 
-  Future<List<Webtoon>> search(String query) async {
+  Future<List<Webtoon>> search(String query, {bool showMature = false}) async {
     try {
-      final data = await _client
+      var q = _client
           .from('webtoons')
           .select('id, title, slug, cover_url, status, type, avg_rating, webtoon_genres(genre:genres(id, name, color))')
           .eq('is_published', true)
-          .ilike('title', '%$query%')
-          .limit(20);
+          .ilike('title', '%$query%');
+      if (!showMature) q = q.eq('is_mature', false);
+      final data = await q.limit(20);
       return (data as List).map((e) => Webtoon.fromJson(e)).toList();
     } on PostgrestException catch (e) {
       throw _mapError(e);

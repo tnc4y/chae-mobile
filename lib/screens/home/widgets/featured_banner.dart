@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/context_colors.dart';
 import '../../../models/webtoon.dart';
 
 class FeaturedBanner extends StatefulWidget {
@@ -26,6 +27,7 @@ class _FeaturedBannerState extends State<FeaturedBanner> {
   @override
   Widget build(BuildContext context) {
     if (widget.items.isEmpty) return const SizedBox.shrink();
+    final colors = context.colors;
 
     return Column(
       children: [
@@ -46,7 +48,7 @@ class _FeaturedBannerState extends State<FeaturedBanner> {
                     margin: const EdgeInsets.symmetric(horizontal: 6),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
-                      color: AppColors.surfaceContainer,
+                      color: colors.surfaceContainer,
                     ),
                     clipBehavior: Clip.antiAlias,
                     child: Stack(
@@ -57,7 +59,7 @@ class _FeaturedBannerState extends State<FeaturedBanner> {
                             imageUrl: w.bannerUrl ?? w.coverUrl!,
                             fit: BoxFit.cover,
                             errorWidget: (_, __, ___) =>
-                                Container(color: AppColors.surfaceContainer),
+                                Container(color: colors.surfaceContainer),
                           ),
                         Container(
                           decoration: BoxDecoration(
@@ -103,9 +105,9 @@ class _FeaturedBannerState extends State<FeaturedBanner> {
                                 const SizedBox(height: 4),
                                 Row(
                                   children: [
-                                    const Icon(
+                                    Icon(
                                       Icons.star_rounded,
-                                      color: AppColors.gold,
+                                      color: colors.gold,
                                       size: 14,
                                     ),
                                     const SizedBox(width: 4),
@@ -142,9 +144,7 @@ class _FeaturedBannerState extends State<FeaturedBanner> {
               width: i == _current ? 20 : 6,
               height: 6,
               decoration: BoxDecoration(
-                color: i == _current
-                    ? AppColors.primary
-                    : AppColors.outline,
+                color: i == _current ? colors.primary : colors.outline,
                 borderRadius: BorderRadius.circular(3),
               ),
             ),
@@ -164,7 +164,7 @@ class _TypeBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.85),
+        color: context.colors.primary.withValues(alpha: 0.85),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
@@ -184,31 +184,32 @@ class _StatusBadge extends StatelessWidget {
   final String status;
   const _StatusBadge({required this.status});
 
-  Color get _color => switch (status) {
-    'ongoing' => AppColors.success,
-    'completed' => AppColors.tertiary,
-    _ => AppColors.warning,
-  };
+  Color _color(BuildContext context) => switch (status) {
+        'ongoing' => AppColors.success,
+        'completed' => context.colors.tertiary,
+        _ => AppColors.warning,
+      };
 
   String get _label => switch (status) {
-    'ongoing' => 'Devam Ediyor',
-    'completed' => 'Tamamlandı',
-    _ => 'Ara Verildi',
-  };
+        'ongoing' => 'Devam Ediyor',
+        'completed' => 'Tamamlandı',
+        _ => 'Ara Verildi',
+      };
 
   @override
   Widget build(BuildContext context) {
+    final c = _color(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: _color.withValues(alpha: 0.2),
+        color: c.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: _color.withValues(alpha: 0.5)),
+        border: Border.all(color: c.withValues(alpha: 0.5)),
       ),
       child: Text(
         _label,
         style: TextStyle(
-          color: _color,
+          color: c,
           fontSize: 10,
           fontWeight: FontWeight.w600,
         ),

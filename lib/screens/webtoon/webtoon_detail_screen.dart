@@ -2,11 +2,15 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../config/app_constants.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/context_colors.dart';
 import '../../models/comment.dart';
 import '../../models/chapter.dart';
 import '../../models/webtoon.dart';
+import '../../providers/profile_provider.dart';
 import '../../services/chapter_service.dart';
 import '../../services/comment_service.dart';
 import '../../services/favorite_service.dart';
@@ -45,6 +49,11 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
   bool _postingComment = false;
   bool _synopsisExpanded = false;
 
+  bool get _isPremiumUser {
+    final role = context.read<ProfileProvider>().profile?.role ?? '';
+    return AppConstants.premiumRoles.contains(role);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -64,9 +73,10 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
     try {
       final webtoon = await _webtoonService.fetchBySlug(widget.slug);
       final chapters = await _chapterService.fetchChapters(webtoon.id);
-      final comments = await _commentService.fetchWebtoonComments(webtoon.id);
+      final comments =
+          await _commentService.fetchWebtoonComments(webtoon.id);
       final likedIds = await _commentService
-          .fetchLikedCommentIds(comments.map((comment) => comment.id));
+          .fetchLikedCommentIds(comments.map((c) => c.id));
       final isFav = await _favoriteService.isFavorite(webtoon.id);
       final myRating = await _ratingService.fetchMyRating(webtoon.id);
 
@@ -75,9 +85,8 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
           _webtoon = webtoon;
           _chapters = chapters;
           _comments = comments
-              .map((comment) => comment.copyWith(
-                    isLiked: likedIds.contains(comment.id),
-                  ))
+              .map((c) =>
+                  c.copyWith(isLiked: likedIds.contains(c.id)))
               .toList();
           _isFavorite = isFav;
           _myRating = myRating;
@@ -89,7 +98,8 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(e.toString()), backgroundColor: AppColors.error),
+              content: Text(e.toString()),
+              backgroundColor: AppColors.error),
         );
       }
     } finally {
@@ -106,15 +116,15 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
     if (_webtoon == null) return;
     setState(() => _commentsLoading = true);
     try {
-      final comments = await _commentService.fetchWebtoonComments(_webtoon!.id);
+      final comments =
+          await _commentService.fetchWebtoonComments(_webtoon!.id);
       final likedIds = await _commentService
-          .fetchLikedCommentIds(comments.map((comment) => comment.id));
+          .fetchLikedCommentIds(comments.map((c) => c.id));
       if (mounted) {
         setState(() {
           _comments = comments
-              .map((comment) => comment.copyWith(
-                    isLiked: likedIds.contains(comment.id),
-                  ))
+              .map((c) =>
+                  c.copyWith(isLiked: likedIds.contains(c.id)))
               .toList();
         });
       }
@@ -122,7 +132,8 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(e.toString()), backgroundColor: AppColors.error),
+              content: Text(e.toString()),
+              backgroundColor: AppColors.error),
         );
       }
     } finally {
@@ -132,7 +143,6 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
 
   Future<void> _postComment() async {
     if (_webtoon == null) return;
-
     final content = _commentController.text.trim();
     if (content.isEmpty) return;
 
@@ -145,15 +155,15 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
       _commentController.clear();
       await _refreshComments();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Yorum eklendi.')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Yorum eklendi.')));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(e.toString()), backgroundColor: AppColors.error),
+              content: Text(e.toString()),
+              backgroundColor: AppColors.error),
         );
       }
     } finally {
@@ -174,7 +184,8 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(e.toString()), backgroundColor: AppColors.error),
+              content: Text(e.toString()),
+              backgroundColor: AppColors.error),
         );
       }
     }
@@ -190,7 +201,7 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
     final userId = Supabase.instance.client.auth.currentUser?.id;
     if (userId == null) return;
 
-    if (chapter.isPremium) {
+    if (chapter.isPremium && !_isPremiumUser) {
       _showPremiumDialog(chapter);
       return;
     }
@@ -201,10 +212,11 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
   }
 
   void _showPremiumDialog(Chapter chapter) {
+    final colors = context.colors;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceContainer,
+        backgroundColor: colors.surfaceContainer,
         title: const Text('Premium Bölüm'),
         content: Text(
           '${chapter.displayTitle} bölümüne erişmek için '
@@ -255,18 +267,20 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     if (_loading) {
       return Scaffold(
-        backgroundColor: AppColors.background,
-        body: const Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
+        backgroundColor: colors.background,
+        body: Center(
+          child: CircularProgressIndicator(color: colors.primary),
         ),
       );
     }
 
     if (_webtoon == null) {
       return Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: colors.background,
         appBar: AppBar(),
         body: const Center(child: Text('Webtoon bulunamadı')),
       );
@@ -275,21 +289,19 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
     final w = _webtoon!;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: colors.background,
       body: NestedScrollView(
-        headerSliverBuilder: (ctx, _) => [
-          _buildSliverAppBar(w),
-        ],
+        headerSliverBuilder: (ctx, _) => [_buildSliverAppBar(w, colors)],
         body: Column(
           children: [
-            _buildTabBar(),
+            _buildTabBar(colors),
             Expanded(
               child: TabBarView(
                 controller: _tabCtrl,
                 children: [
-                  _buildInfoTab(w),
-                  _buildChaptersTab(),
-                  _buildCommentsTab(),
+                  _buildInfoTab(w, colors),
+                  _buildChaptersTab(colors),
+                  _buildCommentsTab(colors),
                 ],
               ),
             ),
@@ -299,10 +311,10 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
     );
   }
 
-  Widget _buildSliverAppBar(Webtoon w) => SliverAppBar(
+  Widget _buildSliverAppBar(Webtoon w, c) => SliverAppBar(
         expandedHeight: 280,
         pinned: true,
-        backgroundColor: AppColors.background,
+        backgroundColor: c.background,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => context.pop(),
@@ -316,7 +328,7 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
                     ? Icons.bookmark_rounded
                     : Icons.bookmark_outline_rounded,
                 key: ValueKey(_isFavorite),
-                color: _isFavorite ? AppColors.primary : AppColors.onSurface,
+                color: _isFavorite ? c.primary : c.onSurface,
               ),
             ),
             onPressed: _toggleFavorite,
@@ -333,15 +345,15 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
                   imageUrl: w.bannerUrl ?? w.coverUrl!,
                   fit: BoxFit.cover,
                   errorWidget: (_, __, ___) =>
-                      Container(color: AppColors.surfaceContainer),
+                      Container(color: c.surfaceContainer),
                 ),
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
                       Colors.transparent,
-                      AppColors.background.withValues(alpha: 0.9),
-                      AppColors.background,
+                      c.background.withValues(alpha: 0.9),
+                      c.background,
                     ],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
@@ -368,7 +380,7 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
                           : Container(
                               width: 90,
                               height: 130,
-                              color: AppColors.surfaceContainer,
+                              color: c.surfaceContainer,
                             ),
                     ),
                     const SizedBox(width: 16),
@@ -379,8 +391,8 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
                         children: [
                           Text(
                             w.title,
-                            style: const TextStyle(
-                              color: AppColors.onBackground,
+                            style: TextStyle(
+                              color: c.onBackground,
                               fontSize: 20,
                               fontWeight: FontWeight.w800,
                               height: 1.2,
@@ -390,14 +402,12 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
                             const SizedBox(height: 4),
                             Text(
                               w.author!.name,
-                              style: const TextStyle(
-                                color: AppColors.onSurfaceDim,
-                                fontSize: 13,
-                              ),
+                              style: TextStyle(
+                                  color: c.onSurfaceDim, fontSize: 13),
                             ),
                           ],
                           const SizedBox(height: 8),
-                          _buildStats(w),
+                          _buildStats(w, c),
                         ],
                       ),
                     ),
@@ -409,31 +419,31 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
         ),
       );
 
-  Widget _buildStats(Webtoon w) => Wrap(
+  Widget _buildStats(Webtoon w, c) => Wrap(
         spacing: 12,
         children: [
           _StatItem(
               icon: Icons.star_rounded,
               value: w.avgRating.toStringAsFixed(1),
-              color: AppColors.gold),
+              color: c.gold),
           _StatItem(
               icon: Icons.visibility_outlined,
               value: _formatCount(w.viewCount),
-              color: AppColors.onSurfaceDim),
+              color: c.onSurfaceDim),
           _StatItem(
               icon: Icons.menu_book_outlined,
               value: '${w.chapterCount}',
-              color: AppColors.onSurfaceDim),
+              color: c.onSurfaceDim),
         ],
       );
 
-  Widget _buildTabBar() => Container(
-        color: AppColors.surface,
+  Widget _buildTabBar(c) => Container(
+        color: c.surface,
         child: TabBar(
           controller: _tabCtrl,
-          labelColor: AppColors.primary,
-          unselectedLabelColor: AppColors.onSurfaceDim,
-          indicatorColor: AppColors.primary,
+          labelColor: c.primary,
+          unselectedLabelColor: c.onSurfaceDim,
+          indicatorColor: c.primary,
           indicatorSize: TabBarIndicatorSize.tab,
           tabs: const [
             Tab(text: 'Bilgi'),
@@ -443,7 +453,7 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
         ),
       );
 
-  Widget _buildInfoTab(Webtoon w) => SingleChildScrollView(
+  Widget _buildInfoTab(Webtoon w, c) => SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -452,42 +462,41 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: w.genres.map((g) => GenreChip(genre: g)).toList(),
+                children:
+                    w.genres.map((g) => GenreChip(genre: g)).toList(),
               ),
               const SizedBox(height: 20),
             ],
             if (w.synopsis != null && w.synopsis!.isNotEmpty) ...[
-              const Text(
+              Text(
                 'Özet',
                 style: TextStyle(
-                  color: AppColors.onBackground,
+                  color: c.onBackground,
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 8),
               GestureDetector(
-                onTap: () =>
-                    setState(() => _synopsisExpanded = !_synopsisExpanded),
+                onTap: () => setState(
+                    () => _synopsisExpanded = !_synopsisExpanded),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       w.synopsis!,
-                      style: const TextStyle(
-                        color: AppColors.onSurface,
-                        fontSize: 14,
-                        height: 1.6,
-                      ),
+                      style: TextStyle(
+                          color: c.onSurface, fontSize: 14, height: 1.6),
                       maxLines: _synopsisExpanded ? null : 4,
-                      overflow:
-                          _synopsisExpanded ? null : TextOverflow.ellipsis,
+                      overflow: _synopsisExpanded
+                          ? null
+                          : TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
                     Text(
                       _synopsisExpanded ? 'Daha az göster' : 'Devamını oku',
-                      style: const TextStyle(
-                        color: AppColors.primary,
+                      style: TextStyle(
+                        color: c.primary,
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
                       ),
@@ -497,10 +506,10 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
               ),
               const SizedBox(height: 24),
             ],
-            const Text(
+            Text(
               'Puanın',
               style: TextStyle(
-                color: AppColors.onBackground,
+                color: c.onBackground,
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
               ),
@@ -511,59 +520,61 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
               minRating: 1,
               itemCount: 10,
               itemSize: 28,
-              glowColor: AppColors.gold.withValues(alpha: 0.3),
-              unratedColor: AppColors.outline,
+              glowColor: c.gold.withValues(alpha: 0.3),
+              unratedColor: c.outline,
               itemBuilder: (_, __) =>
-                  const Icon(Icons.star_rounded, color: AppColors.gold),
+                  Icon(Icons.star_rounded, color: c.gold),
               onRatingUpdate: _rate,
             ),
             if (_myRating != null) ...[
               const SizedBox(height: 6),
               Text(
                 'Puanın: ${_myRating!.toStringAsFixed(0)}/10',
-                style: const TextStyle(
-                  color: AppColors.onSurfaceDim,
-                  fontSize: 13,
-                ),
+                style: TextStyle(color: c.onSurfaceDim, fontSize: 13),
               ),
             ],
             const SizedBox(height: 24),
-            _buildDetailsCard(w),
+            _buildDetailsCard(w, c),
           ],
         ),
       );
 
-  Widget _buildDetailsCard(Webtoon w) => Container(
+  Widget _buildDetailsCard(Webtoon w, c) => Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.surfaceContainer,
+          color: c.surfaceContainer,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           children: [
-            _DetailRow(label: 'Durum', value: w.statusLabel),
-            _DetailRow(label: 'Tür', value: w.typeLabel),
+            _DetailRow(label: 'Durum', value: w.statusLabel, colors: c),
+            _DetailRow(label: 'Tür', value: w.typeLabel, colors: c),
             if (w.releaseDay != null)
-              _DetailRow(label: 'Yayın Günü', value: w.releaseDay!),
+              _DetailRow(
+                  label: 'Yayın Günü', value: w.releaseDay!, colors: c),
             if (w.artist != null)
-              _DetailRow(label: 'Çizer', value: w.artist!.name),
+              _DetailRow(
+                  label: 'Çizer', value: w.artist!.name, colors: c),
             _DetailRow(
               label: 'Toplam Bölüm',
               value: '${w.chapterCount}',
+              colors: c,
             ),
           ],
         ),
       );
 
-  Widget _buildChaptersTab() {
+  Widget _buildChaptersTab(c) {
     if (_chapters.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
           'Henüz bölüm yok',
-          style: TextStyle(color: AppColors.onSurfaceDim),
+          style: TextStyle(color: c.onSurfaceDim),
         ),
       );
     }
+
+    final isPremium = _isPremiumUser;
 
     return ListView.separated(
       padding: const EdgeInsets.all(16),
@@ -573,36 +584,37 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
         final chapter = _chapters[i];
         return ChapterListItem(
           chapter: chapter,
-          isUnlocked: false,
+          isUnlocked: isPremium,
+          isPremiumUser: isPremium,
           onTap: () => _openChapter(chapter),
         );
       },
     );
   }
 
-  Widget _buildCommentsTab() {
+  Widget _buildCommentsTab(c) {
     return RefreshIndicator(
-      color: AppColors.primary,
+      color: c.primary,
       onRefresh: _refreshComments,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _buildCommentComposer(),
+          _buildCommentComposer(c),
           const SizedBox(height: 16),
           if (_commentsLoading)
-            const Padding(
-              padding: EdgeInsets.only(top: 24),
+            Padding(
+              padding: const EdgeInsets.only(top: 24),
               child: Center(
-                child: CircularProgressIndicator(color: AppColors.primary),
+                child: CircularProgressIndicator(color: c.primary),
               ),
             )
           else if (_comments.isEmpty)
-            const Padding(
-              padding: EdgeInsets.only(top: 40),
+            Padding(
+              padding: const EdgeInsets.only(top: 40),
               child: Center(
                 child: Text(
                   'Henüz yorum yok',
-                  style: TextStyle(color: AppColors.onSurfaceDim),
+                  style: TextStyle(color: c.onSurfaceDim),
                 ),
               ),
             )
@@ -622,20 +634,20 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
     );
   }
 
-  Widget _buildCommentComposer() => Container(
+  Widget _buildCommentComposer(c) => Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppColors.surfaceContainer,
+          color: c.surfaceContainer,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.outlineVariant),
+          border: Border.all(color: c.outlineVariant),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Yorum Yaz',
               style: TextStyle(
-                color: AppColors.onBackground,
+                color: c.onBackground,
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
               ),
@@ -645,11 +657,12 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
               controller: _commentController,
               maxLines: 4,
               minLines: 2,
-              decoration: const InputDecoration(
+              style: TextStyle(color: c.onBackground),
+              decoration: InputDecoration(
                 hintText: 'Bu webtoon hakkında düşüncen nedir?',
                 filled: true,
-                fillColor: AppColors.surface,
-                border: OutlineInputBorder(),
+                fillColor: c.surface,
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 10),
@@ -658,7 +671,8 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
               child: ElevatedButton.icon(
                 onPressed: _postingComment ? null : _postComment,
                 icon: const Icon(Icons.send_rounded, size: 18),
-                label: Text(_postingComment ? 'Gönderiliyor...' : 'Gönder'),
+                label:
+                    Text(_postingComment ? 'Gönderiliyor...' : 'Gönder'),
               ),
             ),
           ],
@@ -666,11 +680,15 @@ class _WebtoonDetailScreenState extends State<WebtoonDetailScreen>
       );
 
   String _formatCount(int count) {
-    if (count >= 1000000) return '${(count / 1000000).toStringAsFixed(1)}M';
+    if (count >= 1000000) {
+      return '${(count / 1000000).toStringAsFixed(1)}M';
+    }
     if (count >= 1000) return '${(count / 1000).toStringAsFixed(1)}K';
     return '$count';
   }
 }
+
+// ─── Comment Thread Card ────────────────────────────────────────────────────
 
 class _CommentThreadCard extends StatefulWidget {
   final Comment comment;
@@ -725,14 +743,16 @@ class _CommentThreadCardState extends State<_CommentThreadCard> {
       if (!mounted) return;
       setState(() {
         _isLiked = nextLiked;
-        _likeCount =
-            nextLiked ? _likeCount + 1 : (_likeCount - 1).clamp(0, 1 << 30);
+        _likeCount = nextLiked
+            ? _likeCount + 1
+            : (_likeCount - 1).clamp(0, 1 << 30);
       });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(e.toString()), backgroundColor: AppColors.error),
+              content: Text(e.toString()),
+              backgroundColor: AppColors.error),
         );
       }
     }
@@ -740,17 +760,16 @@ class _CommentThreadCardState extends State<_CommentThreadCard> {
 
   Future<void> _loadReplies() async {
     if (_loadedReplies || _repliesLoading) return;
-
     setState(() => _repliesLoading = true);
     try {
-      final replies = await widget.service.fetchReplies(widget.comment.id);
+      final replies =
+          await widget.service.fetchReplies(widget.comment.id);
       final likedIds = await widget.service
-          .fetchLikedCommentIds(replies.map((comment) => comment.id));
+          .fetchLikedCommentIds(replies.map((r) => r.id));
       if (!mounted) return;
       setState(() {
         _replies = replies
-            .map(
-                (reply) => reply.copyWith(isLiked: likedIds.contains(reply.id)))
+            .map((r) => r.copyWith(isLiked: likedIds.contains(r.id)))
             .toList();
         _loadedReplies = true;
       });
@@ -758,7 +777,8 @@ class _CommentThreadCardState extends State<_CommentThreadCard> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(e.toString()), backgroundColor: AppColors.error),
+              content: Text(e.toString()),
+              backgroundColor: AppColors.error),
         );
       }
     } finally {
@@ -769,15 +789,12 @@ class _CommentThreadCardState extends State<_CommentThreadCard> {
   Future<void> _toggleReplies() async {
     final next = !_showReplies;
     setState(() => _showReplies = next);
-    if (next) {
-      await _loadReplies();
-    }
+    if (next) await _loadReplies();
   }
 
   Future<void> _postReply() async {
     final content = _replyController.text.trim();
     if (content.isEmpty) return;
-
     setState(() => _postingReply = true);
     try {
       await widget.service.postComment(
@@ -799,7 +816,8 @@ class _CommentThreadCardState extends State<_CommentThreadCard> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(e.toString()), backgroundColor: AppColors.error),
+              content: Text(e.toString()),
+              backgroundColor: AppColors.error),
         );
       }
     } finally {
@@ -809,12 +827,13 @@ class _CommentThreadCardState extends State<_CommentThreadCard> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     final avatar = widget.comment.user.avatarUrl;
 
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surfaceContainer,
+        color: colors.surfaceContainer,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -825,17 +844,18 @@ class _CommentThreadCardState extends State<_CommentThreadCard> {
             children: [
               CircleAvatar(
                 radius: 18,
-                backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+                backgroundColor: colors.primary.withValues(alpha: 0.15),
                 backgroundImage: avatar != null && avatar.isNotEmpty
                     ? NetworkImage(avatar)
                     : null,
                 child: avatar == null || avatar.isEmpty
                     ? Text(
                         widget.comment.user.displayedName.isNotEmpty
-                            ? widget.comment.user.displayedName[0].toUpperCase()
+                            ? widget.comment.user.displayedName[0]
+                                .toUpperCase()
                             : '?',
-                        style: const TextStyle(
-                          color: AppColors.primary,
+                        style: TextStyle(
+                          color: colors.primary,
                           fontWeight: FontWeight.w700,
                         ),
                       )
@@ -851,8 +871,8 @@ class _CommentThreadCardState extends State<_CommentThreadCard> {
                         Expanded(
                           child: Text(
                             widget.comment.user.displayedName,
-                            style: const TextStyle(
-                              color: AppColors.onBackground,
+                            style: TextStyle(
+                              color: colors.onBackground,
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
                             ),
@@ -860,21 +880,18 @@ class _CommentThreadCardState extends State<_CommentThreadCard> {
                         ),
                         Text(
                           _formatDate(widget.comment.createdAt),
-                          style: const TextStyle(
-                            color: AppColors.onSurfaceDim,
-                            fontSize: 11,
-                          ),
+                          style: TextStyle(
+                              color: colors.onSurfaceDim, fontSize: 11),
                         ),
                       ],
                     ),
                     const SizedBox(height: 6),
                     Text(
                       widget.comment.content,
-                      style: const TextStyle(
-                        color: AppColors.onSurface,
-                        fontSize: 14,
-                        height: 1.4,
-                      ),
+                      style: TextStyle(
+                          color: colors.onSurface,
+                          fontSize: 14,
+                          height: 1.4),
                     ),
                     const SizedBox(height: 10),
                     Row(
@@ -888,24 +905,26 @@ class _CommentThreadCardState extends State<_CommentThreadCard> {
                             size: 18,
                             color: _isLiked
                                 ? AppColors.error
-                                : AppColors.onSurfaceDim,
+                                : colors.onSurfaceDim,
                           ),
                           label: Text('$_likeCount'),
                           style: TextButton.styleFrom(
-                            foregroundColor: AppColors.onSurfaceDim,
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            foregroundColor: colors.onSurfaceDim,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8),
                             visualDensity: VisualDensity.compact,
                           ),
                         ),
                         const SizedBox(width: 6),
                         TextButton.icon(
-                          onPressed: () => setState(
-                              () => _showReplyComposer = !_showReplyComposer),
+                          onPressed: () => setState(() =>
+                              _showReplyComposer = !_showReplyComposer),
                           icon: const Icon(Icons.reply_rounded, size: 18),
                           label: const Text('Yanıtla'),
                           style: TextButton.styleFrom(
-                            foregroundColor: AppColors.onSurfaceDim,
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            foregroundColor: colors.onSurfaceDim,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8),
                             visualDensity: VisualDensity.compact,
                           ),
                         ),
@@ -926,10 +945,11 @@ class _CommentThreadCardState extends State<_CommentThreadCard> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: AppColors.warning.withValues(alpha: 0.15),
+                          color:
+                              AppColors.warning.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(999),
                         ),
-                        child: const Text(
+                        child: Text(
                           'Spoiler',
                           style: TextStyle(
                             color: AppColors.warning,
@@ -954,11 +974,12 @@ class _CommentThreadCardState extends State<_CommentThreadCard> {
                     controller: _replyController,
                     maxLines: 3,
                     minLines: 2,
-                    decoration: const InputDecoration(
+                    style: TextStyle(color: colors.onBackground),
+                    decoration: InputDecoration(
                       hintText: 'Yanıtını yaz...',
                       filled: true,
-                      fillColor: AppColors.surface,
-                      border: OutlineInputBorder(),
+                      fillColor: colors.surface,
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -967,7 +988,8 @@ class _CommentThreadCardState extends State<_CommentThreadCard> {
                     child: ElevatedButton.icon(
                       onPressed: _postingReply ? null : _postReply,
                       icon: const Icon(Icons.send_rounded, size: 18),
-                      label: Text(_postingReply ? 'Gönderiliyor...' : 'Gönder'),
+                      label: Text(
+                          _postingReply ? 'Gönderiliyor...' : 'Gönder'),
                     ),
                   ),
                 ],
@@ -977,16 +999,17 @@ class _CommentThreadCardState extends State<_CommentThreadCard> {
           if (_showReplies) ...[
             const SizedBox(height: 12),
             if (_repliesLoading)
-              const Padding(
-                padding: EdgeInsets.only(left: 30, top: 4),
-                child: CircularProgressIndicator(color: AppColors.primary),
+              Padding(
+                padding: const EdgeInsets.only(left: 30, top: 4),
+                child: CircularProgressIndicator(color: colors.primary),
               )
             else if (_replies.isEmpty)
-              const Padding(
-                padding: EdgeInsets.only(left: 30, top: 4),
+              Padding(
+                padding: const EdgeInsets.only(left: 30, top: 4),
                 child: Text(
                   'Henüz yanıt yok',
-                  style: TextStyle(color: AppColors.onSurfaceDim, fontSize: 12),
+                  style: TextStyle(
+                      color: colors.onSurfaceDim, fontSize: 12),
                 ),
               )
             else
@@ -1022,6 +1045,8 @@ class _CommentThreadCardState extends State<_CommentThreadCard> {
   }
 }
 
+// ─── Reply Card ──────────────────────────────────────────────────────────────
+
 class _ReplyCard extends StatefulWidget {
   final Comment comment;
   final CommentService service;
@@ -1054,14 +1079,16 @@ class _ReplyCardState extends State<_ReplyCard> {
       if (!mounted) return;
       setState(() {
         _isLiked = nextLiked;
-        _likeCount =
-            nextLiked ? _likeCount + 1 : (_likeCount - 1).clamp(0, 1 << 30);
+        _likeCount = nextLiked
+            ? _likeCount + 1
+            : (_likeCount - 1).clamp(0, 1 << 30);
       });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(e.toString()), backgroundColor: AppColors.error),
+              content: Text(e.toString()),
+              backgroundColor: AppColors.error),
         );
       }
     }
@@ -1069,21 +1096,22 @@ class _ReplyCardState extends State<_ReplyCard> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     final avatar = widget.comment.user.avatarUrl;
 
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.8),
+        color: colors.surface.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.outlineVariant),
+        border: Border.all(color: colors.outlineVariant),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CircleAvatar(
             radius: 14,
-            backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+            backgroundColor: colors.primary.withValues(alpha: 0.15),
             backgroundImage: avatar != null && avatar.isNotEmpty
                 ? NetworkImage(avatar)
                 : null,
@@ -1092,8 +1120,8 @@ class _ReplyCardState extends State<_ReplyCard> {
                     widget.comment.user.displayedName.isNotEmpty
                         ? widget.comment.user.displayedName[0].toUpperCase()
                         : '?',
-                    style: const TextStyle(
-                      color: AppColors.primary,
+                    style: TextStyle(
+                      color: colors.primary,
                       fontWeight: FontWeight.w700,
                       fontSize: 12,
                     ),
@@ -1110,8 +1138,8 @@ class _ReplyCardState extends State<_ReplyCard> {
                     Expanded(
                       child: Text(
                         widget.comment.user.displayedName,
-                        style: const TextStyle(
-                          color: AppColors.onBackground,
+                        style: TextStyle(
+                          color: colors.onBackground,
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
                         ),
@@ -1119,34 +1147,31 @@ class _ReplyCardState extends State<_ReplyCard> {
                     ),
                     Text(
                       _formatDate(widget.comment.createdAt),
-                      style: const TextStyle(
-                        color: AppColors.onSurfaceDim,
-                        fontSize: 11,
-                      ),
+                      style: TextStyle(
+                          color: colors.onSurfaceDim, fontSize: 11),
                     ),
                   ],
                 ),
                 const SizedBox(height: 4),
                 Text(
                   widget.comment.content,
-                  style: const TextStyle(
-                    color: AppColors.onSurface,
-                    fontSize: 13,
-                    height: 1.4,
-                  ),
+                  style: TextStyle(
+                      color: colors.onSurface, fontSize: 13, height: 1.4),
                 ),
                 const SizedBox(height: 6),
                 TextButton.icon(
                   onPressed: _toggleLike,
                   style: TextButton.styleFrom(
-                    foregroundColor: AppColors.onSurfaceDim,
+                    foregroundColor: colors.onSurfaceDim,
                     padding: const EdgeInsets.symmetric(horizontal: 6),
                     visualDensity: VisualDensity.compact,
                   ),
                   icon: Icon(
-                    _isLiked ? Icons.favorite_rounded : Icons.favorite_outline,
+                    _isLiked
+                        ? Icons.favorite_rounded
+                        : Icons.favorite_outline,
                     size: 16,
-                    color: _isLiked ? AppColors.error : AppColors.onSurfaceDim,
+                    color: _isLiked ? AppColors.error : colors.onSurfaceDim,
                   ),
                   label: Text('$_likeCount'),
                 ),
@@ -1168,13 +1193,14 @@ class _ReplyCardState extends State<_ReplyCard> {
   }
 }
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
 class _StatItem extends StatelessWidget {
   final IconData icon;
   final String value;
   final Color color;
 
-  const _StatItem(
-      {required this.icon, required this.value, required this.color});
+  const _StatItem({required this.icon, required this.value, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -1183,11 +1209,9 @@ class _StatItem extends StatelessWidget {
       children: [
         Icon(icon, size: 14, color: color),
         const SizedBox(width: 4),
-        Text(
-          value,
-          style: TextStyle(
-              color: color, fontSize: 13, fontWeight: FontWeight.w500),
-        ),
+        Text(value,
+            style: TextStyle(
+                color: color, fontSize: 13, fontWeight: FontWeight.w500)),
       ],
     );
   }
@@ -1196,28 +1220,27 @@ class _StatItem extends StatelessWidget {
 class _DetailRow extends StatelessWidget {
   final String label;
   final String value;
+  final dynamic colors;
 
-  const _DetailRow({required this.label, required this.value});
+  const _DetailRow(
+      {required this.label, required this.value, required this.colors});
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Text(
-            label,
-            style: const TextStyle(color: AppColors.onSurfaceDim, fontSize: 14),
-          ),
+          Text(label,
+              style: TextStyle(color: c.onSurfaceDim, fontSize: 14)),
           const Spacer(),
-          Text(
-            value,
-            style: const TextStyle(
-              color: AppColors.onBackground,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+          Text(value,
+              style: TextStyle(
+                color: c.onBackground,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              )),
         ],
       ),
     );

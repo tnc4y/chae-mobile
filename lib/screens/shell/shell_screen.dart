@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/context_colors.dart';
 
 class ShellScreen extends StatelessWidget {
   final Widget child;
@@ -35,13 +35,14 @@ class ShellScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final index = _selectedIndex(context);
+    final colors = context.colors;
 
     return Scaffold(
       body: child,
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           border: Border(
-            top: BorderSide(color: AppColors.outlineVariant, width: 0.5),
+            top: BorderSide(color: colors.outlineVariant, width: 0.5),
           ),
         ),
         child: NavigationBar(

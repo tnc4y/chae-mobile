@@ -12,6 +12,8 @@ import '../../screens/notifications/notifications_screen.dart';
 import '../../screens/profile/profile_screen.dart';
 import '../../screens/webtoon/webtoon_detail_screen.dart';
 import '../../screens/reader/reader_screen.dart';
+import '../../screens/settings/settings_screen.dart';
+import '../../screens/settings/themes_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -50,6 +52,16 @@ GoRouter buildRouter() => GoRouter(
         webtoonId: state.uri.queryParameters['webtoonId'] ?? '',
         webtoonType: state.uri.queryParameters['type'] ?? 'webtoon',
       ),
+    ),
+    GoRoute(
+      path: '/themes',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const ThemesScreen(),
+    ),
+    GoRoute(
+      path: '/settings',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const SettingsScreen(),
     ),
     ShellRoute(
       navigatorKey: _shellNavigatorKey,

@@ -19,6 +19,10 @@ dependencies:
   shimmer: ^3.0.0
   flutter_rating_bar: ^4.0.1
   purchases_flutter: ^8.10.1
+  shared_preferences: ^2.3.3
+  archive: ^3.6.1
+  path_provider: ^2.1.4
+  dio: ^5.7.0
 
 dev_dependencies:
   flutter_test:

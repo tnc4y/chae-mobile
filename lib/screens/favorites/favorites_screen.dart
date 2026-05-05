@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/context_colors.dart';
 import '../../models/webtoon.dart';
 import '../../services/favorite_service.dart';
 import '../home/widgets/webtoon_card.dart';
@@ -32,7 +33,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: AppColors.error),
+          SnackBar(
+              content: Text(e.toString()),
+              backgroundColor: AppColors.error),
         );
       }
     } finally {
@@ -42,8 +45,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: colors.background,
       appBar: AppBar(
         title: const Text('Favorilerim'),
         actions: [
@@ -52,15 +57,16 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               padding: const EdgeInsets.only(right: 16),
               child: Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.15),
+                    color: colors.primary.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     '${_favorites.length}',
-                    style: const TextStyle(
-                      color: AppColors.primary,
+                    style: TextStyle(
+                      color: colors.primary,
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
                     ),
@@ -71,18 +77,16 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         ],
       ),
       body: RefreshIndicator(
-        color: AppColors.primary,
+        color: colors.primary,
         onRefresh: _load,
-        child: _buildBody(),
+        child: _buildBody(colors),
       ),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(c) {
     if (_loading) {
-      return const Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
-      );
+      return Center(child: CircularProgressIndicator(color: c.primary));
     }
 
     if (_favorites.isEmpty) {
@@ -97,28 +101,28 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceContainer,
+                    color: c.surfaceContainer,
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.bookmark_outline_rounded,
                     size: 40,
-                    color: AppColors.outline,
+                    color: c.outline,
                   ),
                 ),
                 const SizedBox(height: 20),
-                const Text(
+                Text(
                   'Henüz favori yok',
                   style: TextStyle(
-                    color: AppColors.onBackground,
+                    color: c.onBackground,
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Beğendiğin webtoonları buraya ekle.',
-                  style: TextStyle(color: AppColors.onSurfaceDim),
+                  style: TextStyle(color: c.onSurfaceDim),
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(

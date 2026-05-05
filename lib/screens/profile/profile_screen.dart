@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/context_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../services/revenuecat_service.dart';
@@ -37,9 +38,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
 
+    final colors = context.colors;
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: AppColors.surfaceContainer,
+      backgroundColor: colors.surfaceContainer,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -55,9 +57,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Abonelik satın alabilir veya eski satın alımlarını geri yükleyebilirsin.',
-                style: TextStyle(color: AppColors.onSurfaceDim),
+                style: TextStyle(color: colors.onSurfaceDim),
               ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
@@ -159,9 +161,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<Package?> _selectPackage(List<Package> packages) {
+    final colors = context.colors;
     return showModalBottomSheet<Package>(
       context: context,
-      backgroundColor: AppColors.surfaceContainer,
+      backgroundColor: colors.surfaceContainer,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -179,7 +182,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 12),
               ...packages.map(
                 (package) => Card(
-                  color: AppColors.surface,
+                  color: colors.surface,
                   child: ListTile(
                     title: Text(package.storeProduct.title),
                     subtitle: Text(package.storeProduct.description),
@@ -201,15 +204,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _showSnackBar(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: AppColors.primary),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: context.colors.primary,
+      ),
     );
   }
 
   Future<void> _signOut() async {
+    final colors = context.colors;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceContainer,
+        backgroundColor: colors.surfaceContainer,
         title: const Text('Çıkış Yap'),
         content: const Text('Hesabından çıkmak istediğine emin misin?'),
         actions: [
@@ -233,32 +240,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     final profileProvider = context.watch<ProfileProvider>();
     final profile = profileProvider.profile;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: colors.background,
       appBar: AppBar(
         title: const Text('Profil'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout_rounded, color: AppColors.error),
+            icon: Icon(Icons.logout_rounded, color: colors.error),
             onPressed: _signOut,
           ),
           const SizedBox(width: 4),
         ],
       ),
       body: profileProvider.loading && profile == null
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primary))
+          ? Center(
+              child: CircularProgressIndicator(color: colors.primary))
           : RefreshIndicator(
-              color: AppColors.primary,
+              color: colors.primary,
               onRefresh: profileProvider.fetchProfile,
               child: ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
                   if (profile != null) ...[
-                    _buildAvatar(profile.avatarUrl, profile.displayedName),
+                    _buildAvatar(context, profile.avatarUrl, profile.displayedName),
                     const SizedBox(height: 16),
                     Center(
                       child: Text(
@@ -269,8 +277,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Center(
                       child: Text(
                         '@${profile.username}',
-                        style: const TextStyle(
-                          color: AppColors.onSurfaceDim,
+                        style: TextStyle(
+                          color: colors.onSurfaceDim,
                           fontSize: 14,
                         ),
                       ),
@@ -281,8 +289,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: Text(
                           profile.bio!,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: AppColors.onSurface,
+                          style: TextStyle(
+                            color: colors.onSurface,
                             fontSize: 14,
                             height: 1.5,
                           ),
@@ -290,46 +298,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ],
                     const SizedBox(height: 16),
-                    _buildRoleBadge(profile.role),
+                    _buildRoleBadge(context, profile.role),
                     const SizedBox(height: 24),
-                    _buildCoinsCard(profile.coins),
+                    _buildCoinsCard(context),
                     const SizedBox(height: 24),
                   ],
-                  _buildMenuSection(),
+                  _buildMenuSection(context),
                   const SizedBox(height: 24),
-                  _buildSignOutButton(),
+                  _buildSignOutButton(context),
                 ],
               ),
             ),
     );
   }
 
-  Widget _buildAvatar(String? avatarUrl, String name) => Center(
-        child: Container(
-          width: 88,
-          height: 88,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: AppColors.primaryGradient,
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.3),
-                blurRadius: 20,
-                spreadRadius: 2,
-              ),
-            ],
-          ),
-          child: avatarUrl != null
-              ? ClipOval(
-                  child: CachedNetworkImage(
-                    imageUrl: avatarUrl,
-                    fit: BoxFit.cover,
-                    errorWidget: (_, __, ___) => _avatarPlaceholder(name),
-                  ),
-                )
-              : _avatarPlaceholder(name),
+  Widget _buildAvatar(BuildContext context, String? avatarUrl, String name) {
+    final colors = context.colors;
+    return Center(
+      child: Container(
+        width: 88,
+        height: 88,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: colors.primaryGradient,
+          boxShadow: [
+            BoxShadow(
+              color: colors.primary.withValues(alpha: 0.3),
+              blurRadius: 20,
+              spreadRadius: 2,
+            ),
+          ],
         ),
-      );
+        child: avatarUrl != null
+            ? ClipOval(
+                child: CachedNetworkImage(
+                  imageUrl: avatarUrl,
+                  fit: BoxFit.cover,
+                  errorWidget: (_, __, ___) => _avatarPlaceholder(name),
+                ),
+              )
+            : _avatarPlaceholder(name),
+      ),
+    );
+  }
 
   Widget _avatarPlaceholder(String name) => Center(
         child: Text(
@@ -342,7 +353,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       );
 
-  Widget _buildRoleBadge(String role) {
+  Widget _buildRoleBadge(BuildContext context, String role) {
+    final colors = context.colors;
     final isPremium =
         role == 'premium' || role == 'admin' || role == 'moderator';
     if (!isPremium) return const SizedBox.shrink();
@@ -351,13 +363,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [AppColors.premium, Color(0xFFFFCC02)],
+          gradient: LinearGradient(
+            colors: [colors.premium, const Color(0xFFFFCC02)],
           ),
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: AppColors.premium.withValues(alpha: 0.4),
+              color: colors.premium.withValues(alpha: 0.4),
               blurRadius: 12,
             ),
           ],
@@ -383,121 +395,134 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildCoinsCard(int coins) => Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceContainer,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.gold.withValues(alpha: 0.2)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: AppColors.gold.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.toll_rounded,
-                  color: AppColors.gold, size: 26),
-            ),
-            const SizedBox(width: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Coin Bakiyesi',
-                  style: TextStyle(color: AppColors.onSurfaceDim, fontSize: 13),
-                ),
-                Text(
-                  '$coins Coin',
-                  style: const TextStyle(
-                    color: AppColors.gold,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-            const Spacer(),
-            ElevatedButton(
-              onPressed: _purchaseLoading ? null : _openPremiumFlow,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.gold,
-                foregroundColor: Colors.black,
-                minimumSize: const Size(80, 36),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                textStyle:
-                    const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-              ),
-              child: const Text('Satın Al'),
-            ),
-          ],
-        ),
-      );
+  Widget _buildCoinsCard(BuildContext context) {
+    final colors = context.colors;
+    final profile = context.read<ProfileProvider>().profile;
+    final coins = profile?.coins ?? 0;
 
-  Widget _buildMenuSection() => Container(
-        decoration: BoxDecoration(
-          color: AppColors.surfaceContainer,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          children: [
-            _MenuItem(
-              icon: Icons.bookmark_rounded,
-              label: 'Favorilerim',
-              color: AppColors.primary,
-              onTap: () => context.go('/favorites'),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainer,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.gold.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: colors.gold.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
             ),
-            const Divider(
-                height: 1, color: AppColors.outlineVariant, indent: 56),
-            _MenuItem(
-              icon: Icons.history_rounded,
-              label: 'Okuma Geçmişi',
-              color: AppColors.tertiary,
-              onTap: () {},
+            child: Icon(Icons.toll_rounded, color: colors.gold, size: 26),
+          ),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Coin Bakiyesi',
+                style: TextStyle(color: colors.onSurfaceDim, fontSize: 13),
+              ),
+              Text(
+                '$coins Coin',
+                style: TextStyle(
+                  color: colors.gold,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const Spacer(),
+          ElevatedButton(
+            onPressed: _purchaseLoading ? null : _openPremiumFlow,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: colors.gold,
+              foregroundColor: Colors.black,
+              minimumSize: const Size(80, 36),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              textStyle:
+                  const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
             ),
-            const Divider(
-                height: 1, color: AppColors.outlineVariant, indent: 56),
-            _MenuItem(
-              icon: Icons.notifications_rounded,
-              label: 'Bildirimler',
-              color: AppColors.secondary,
-              onTap: () => context.go('/notifications'),
-            ),
-            const Divider(
-                height: 1, color: AppColors.outlineVariant, indent: 56),
-            _MenuItem(
-              icon: Icons.workspace_premium_rounded,
-              label: 'Premium Üyelik',
-              color: AppColors.premium,
-              onTap: _openPremiumFlow,
-            ),
-            const Divider(
-                height: 1, color: AppColors.outlineVariant, indent: 56),
-            _MenuItem(
-              icon: Icons.settings_rounded,
-              label: 'Ayarlar',
-              color: AppColors.onSurfaceDim,
-              onTap: () {},
-            ),
-          ],
-        ),
-      );
+            child: const Text('Satın Al'),
+          ),
+        ],
+      ),
+    );
+  }
 
-  Widget _buildSignOutButton() => OutlinedButton.icon(
-        onPressed: _signOut,
-        icon: const Icon(Icons.logout_rounded, color: AppColors.error),
-        label: const Text(
-          'Çıkış Yap',
-          style: TextStyle(color: AppColors.error),
-        ),
-        style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: AppColors.error),
-          minimumSize: const Size(double.infinity, 50),
-        ),
-      );
+  Widget _buildMenuSection(BuildContext context) {
+    final colors = context.colors;
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surfaceContainer,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          _MenuItem(
+            icon: Icons.bookmark_rounded,
+            label: 'Favorilerim',
+            color: colors.primary,
+            onTap: () => context.go('/favorites'),
+          ),
+          Divider(height: 1, color: colors.outlineVariant, indent: 56),
+          _MenuItem(
+            icon: Icons.history_rounded,
+            label: 'Okuma Geçmişi',
+            color: colors.tertiary,
+            onTap: () {},
+          ),
+          Divider(height: 1, color: colors.outlineVariant, indent: 56),
+          _MenuItem(
+            icon: Icons.notifications_rounded,
+            label: 'Bildirimler',
+            color: colors.secondary,
+            onTap: () => context.go('/notifications'),
+          ),
+          Divider(height: 1, color: colors.outlineVariant, indent: 56),
+          _MenuItem(
+            icon: Icons.workspace_premium_rounded,
+            label: 'Premium Üyelik',
+            color: colors.premium,
+            onTap: _openPremiumFlow,
+          ),
+          Divider(height: 1, color: colors.outlineVariant, indent: 56),
+          _MenuItem(
+            icon: Icons.palette_rounded,
+            label: 'Temalar',
+            color: colors.primary,
+            onTap: () => context.push('/themes'),
+          ),
+          Divider(height: 1, color: colors.outlineVariant, indent: 56),
+          _MenuItem(
+            icon: Icons.settings_rounded,
+            label: 'Ayarlar',
+            color: colors.onSurfaceDim,
+            onTap: () => context.push('/settings'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSignOutButton(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: _signOut,
+      icon: Icon(Icons.logout_rounded, color: AppColors.error),
+      label: const Text(
+        'Çıkış Yap',
+        style: TextStyle(color: AppColors.error),
+      ),
+      style: OutlinedButton.styleFrom(
+        side: const BorderSide(color: AppColors.error),
+        minimumSize: const Size(double.infinity, 50),
+      ),
+    );
+  }
 }
 
 class _MenuItem extends StatelessWidget {
@@ -515,6 +540,7 @@ class _MenuItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
@@ -535,17 +561,17 @@ class _MenuItem extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(
-                  color: AppColors.onSurface,
+                style: TextStyle(
+                  color: colors.onSurface,
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
                 ),
               ),
             ),
-            const Icon(
+            Icon(
               Icons.arrow_forward_ios_rounded,
               size: 16,
-              color: AppColors.onSurfaceDim,
+              color: colors.onSurfaceDim,
             ),
           ],
         ),

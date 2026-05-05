@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/theme/app_colors.dart';
+import 'package:provider/provider.dart';
+import '../../core/theme/context_colors.dart';
 import '../../models/genre.dart';
 import '../../models/webtoon.dart';
+import '../../providers/settings_provider.dart';
 import '../../services/webtoon_service.dart';
 import '../home/widgets/webtoon_card.dart';
 
@@ -52,7 +54,8 @@ class _SearchScreenState extends State<SearchScreen> {
   Future<void> _loadAll() async {
     setState(() => _loading = true);
     try {
-      final data = await _service.fetchList();
+      final showMature = context.read<SettingsProvider>().matureContent;
+      final data = await _service.fetchList(showMature: showMature);
       if (mounted) {
         setState(() {
           _all = data;
@@ -83,7 +86,8 @@ class _SearchScreenState extends State<SearchScreen> {
       _searched = true;
     });
     try {
-      final data = await _service.search(query.trim());
+      final showMature = context.read<SettingsProvider>().matureContent;
+      final data = await _service.search(query.trim(), showMature: showMature);
       if (mounted) setState(() => _results = data);
     } catch (_) {
     } finally {
@@ -115,8 +119,10 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: colors.background,
       appBar: AppBar(
         title: const Text('Keşfet'),
         bottom: PreferredSize(
@@ -126,13 +132,15 @@ class _SearchScreenState extends State<SearchScreen> {
             child: TextField(
               controller: _ctrl,
               onChanged: _onChanged,
-              style: const TextStyle(color: AppColors.onBackground),
+              style: TextStyle(color: colors.onBackground),
               decoration: InputDecoration(
                 hintText: 'Webtoon ara...',
-                prefixIcon: const Icon(Icons.search_rounded, color: AppColors.onSurfaceDim),
+                prefixIcon:
+                    Icon(Icons.search_rounded, color: colors.onSurfaceDim),
                 suffixIcon: _ctrl.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.close_rounded, color: AppColors.onSurfaceDim),
+                        icon: Icon(Icons.close_rounded,
+                            color: colors.onSurfaceDim),
                         onPressed: () {
                           _ctrl.clear();
                           _search('');
@@ -146,68 +154,68 @@ class _SearchScreenState extends State<SearchScreen> {
       ),
       body: Column(
         children: [
-          _buildGenreFilter(),
-          Expanded(child: _buildResults()),
+          _buildGenreFilter(colors),
+          Expanded(child: _buildResults(colors)),
         ],
       ),
     );
   }
 
-  Widget _buildGenreFilter() => SizedBox(
-    height: 48,
-    child: ListView.separated(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: _genres.length + 1,
-      separatorBuilder: (_, __) => const SizedBox(width: 8),
-      itemBuilder: (_, i) {
-        if (i == 0) {
-          final isAll = _selectedGenreSlug == null;
-          return FilterChip(
-            label: const Text('Tümü'),
-            selected: isAll,
-            onSelected: (_) => _clearGenre(),
-            backgroundColor: AppColors.surfaceContainer,
-            selectedColor: AppColors.primary.withValues(alpha: 0.2),
-            labelStyle: TextStyle(
-              color: isAll ? AppColors.primary : AppColors.onSurface,
-              fontWeight: isAll ? FontWeight.w600 : FontWeight.normal,
-            ),
-            side: BorderSide(
-              color: isAll ? AppColors.primary : AppColors.outline,
-            ),
-          );
-        }
-        final genre = _genres[i - 1];
-        final isSelected = _selectedGenreSlug == genre.slug;
-        Color genreColor = AppColors.primary;
-        if (genre.color != null) {
-          try {
-            genreColor = Color(int.parse(genre.color!.replaceFirst('#', '0xFF')));
-          } catch (_) {}
-        }
-        return FilterChip(
-          label: Text(genre.name),
-          selected: isSelected,
-          onSelected: (_) => isSelected ? _clearGenre() : _filterByGenre(genre.slug!),
-          backgroundColor: AppColors.surfaceContainer,
-          selectedColor: genreColor.withValues(alpha: 0.2),
-          labelStyle: TextStyle(
-            color: isSelected ? genreColor : AppColors.onSurface,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-          ),
-          side: BorderSide(
-            color: isSelected ? genreColor : AppColors.outline,
-          ),
-        );
-      },
-    ),
-  );
+  Widget _buildGenreFilter(c) => SizedBox(
+        height: 48,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: _genres.length + 1,
+          separatorBuilder: (_, __) => const SizedBox(width: 8),
+          itemBuilder: (_, i) {
+            if (i == 0) {
+              final isAll = _selectedGenreSlug == null;
+              return FilterChip(
+                label: const Text('Tümü'),
+                selected: isAll,
+                onSelected: (_) => _clearGenre(),
+                backgroundColor: c.surfaceContainer,
+                selectedColor: c.primary.withValues(alpha: 0.2),
+                labelStyle: TextStyle(
+                  color: isAll ? c.primary : c.onSurface,
+                  fontWeight: isAll ? FontWeight.w600 : FontWeight.normal,
+                ),
+                side: BorderSide(color: isAll ? c.primary : c.outline),
+              );
+            }
+            final genre = _genres[i - 1];
+            final isSelected = _selectedGenreSlug == genre.slug;
+            Color genreColor = c.primary;
+            if (genre.color != null) {
+              try {
+                genreColor = Color(
+                    int.parse(genre.color!.replaceFirst('#', '0xFF')));
+              } catch (_) {}
+            }
+            return FilterChip(
+              label: Text(genre.name),
+              selected: isSelected,
+              onSelected: (_) => isSelected
+                  ? _clearGenre()
+                  : _filterByGenre(genre.slug!),
+              backgroundColor: c.surfaceContainer,
+              selectedColor: genreColor.withValues(alpha: 0.2),
+              labelStyle: TextStyle(
+                color: isSelected ? genreColor : c.onSurface,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              ),
+              side: BorderSide(
+                  color: isSelected ? genreColor : c.outline),
+            );
+          },
+        ),
+      );
 
-  Widget _buildResults() {
+  Widget _buildResults(c) {
     if (_loading) {
-      return const Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
+      return Center(
+        child: CircularProgressIndicator(color: c.primary),
       );
     }
 
@@ -216,11 +224,11 @@ class _SearchScreenState extends State<SearchScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.search_off_rounded, size: 56, color: AppColors.outline),
+            Icon(Icons.search_off_rounded, size: 56, color: c.outline),
             const SizedBox(height: 12),
             Text(
               _searched ? 'Sonuç bulunamadı' : 'Aramak için yazın',
-              style: const TextStyle(color: AppColors.onSurfaceDim),
+              style: TextStyle(color: c.onSurfaceDim),
             ),
           ],
         ),

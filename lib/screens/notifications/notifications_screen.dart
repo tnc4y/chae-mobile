@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/context_colors.dart';
 import '../../models/notification_model.dart';
 import '../../services/notification_service.dart';
 
@@ -71,10 +72,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     final unreadCount = _notifications.where((n) => !n.isRead).length;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: colors.background,
       appBar: AppBar(
         title: const Text('Bildirimler'),
         actions: [
@@ -87,18 +89,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ],
       ),
       body: RefreshIndicator(
-        color: AppColors.primary,
+        color: colors.primary,
         onRefresh: _load,
-        child: _buildBody(),
+        child: _buildBody(colors),
       ),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(c) {
     if (_loading) {
-      return const Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
-      );
+      return Center(child: CircularProgressIndicator(color: c.primary));
     }
 
     if (_notifications.isEmpty) {
@@ -113,28 +113,28 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceContainer,
+                    color: c.surfaceContainer,
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.notifications_none_rounded,
                     size: 40,
-                    color: AppColors.outline,
+                    color: c.outline,
                   ),
                 ),
                 const SizedBox(height: 20),
-                const Text(
+                Text(
                   'Bildirim yok',
                   style: TextStyle(
-                    color: AppColors.onBackground,
+                    color: c.onBackground,
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Yeni bölüm bildirimleri burada görünecek.',
-                  style: TextStyle(color: AppColors.onSurfaceDim),
+                  style: TextStyle(color: c.onSurfaceDim),
                 ),
               ],
             ),
@@ -145,10 +145,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     return ListView.separated(
       itemCount: _notifications.length,
-      separatorBuilder: (_, __) => const Divider(
+      separatorBuilder: (_, __) => Divider(
         height: 1,
         indent: 72,
-        color: AppColors.outlineVariant,
+        color: c.outlineVariant,
       ),
       itemBuilder: (_, i) => _NotificationTile(
         notification: _notifications[i],
@@ -165,29 +165,35 @@ class _NotificationTile extends StatelessWidget {
   const _NotificationTile({required this.notification, required this.onTap});
 
   IconData get _icon => switch (notification.type) {
-    'new_chapter' => Icons.menu_book_rounded,
-    'comment_reply' => Icons.reply_rounded,
-    'comment_like' => Icons.favorite_rounded,
-    'system' => Icons.campaign_rounded,
-    _ => Icons.notifications_rounded,
-  };
+        'new_chapter' => Icons.menu_book_rounded,
+        'comment_reply' => Icons.reply_rounded,
+        'comment_like' => Icons.favorite_rounded,
+        'system' => Icons.campaign_rounded,
+        _ => Icons.notifications_rounded,
+      };
 
-  Color get _iconColor => switch (notification.type) {
-    'new_chapter' => AppColors.primary,
-    'comment_reply' => AppColors.tertiary,
-    'comment_like' => AppColors.secondary,
-    'system' => AppColors.warning,
-    _ => AppColors.onSurfaceDim,
-  };
+  Color _iconColor(BuildContext context) {
+    final c = context.colors;
+    return switch (notification.type) {
+      'new_chapter' => c.primary,
+      'comment_reply' => c.tertiary,
+      'comment_like' => c.secondary,
+      'system' => AppColors.warning,
+      _ => c.onSurfaceDim,
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
+    final iconColor = _iconColor(context);
+
     return InkWell(
       onTap: onTap,
       child: Container(
         color: notification.isRead
             ? Colors.transparent
-            : AppColors.primary.withValues(alpha: 0.05),
+            : c.primary.withValues(alpha: 0.05),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -196,10 +202,10 @@ class _NotificationTile extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: _iconColor.withValues(alpha: 0.15),
+                color: iconColor.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(_icon, color: _iconColor, size: 22),
+              child: Icon(_icon, color: iconColor, size: 22),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -213,8 +219,8 @@ class _NotificationTile extends StatelessWidget {
                           notification.title,
                           style: TextStyle(
                             color: notification.isRead
-                                ? AppColors.onSurface
-                                : AppColors.onBackground,
+                                ? c.onSurface
+                                : c.onBackground,
                             fontSize: 14,
                             fontWeight: notification.isRead
                                 ? FontWeight.w400
@@ -226,8 +232,8 @@ class _NotificationTile extends StatelessWidget {
                         Container(
                           width: 8,
                           height: 8,
-                          decoration: const BoxDecoration(
-                            color: AppColors.primary,
+                          decoration: BoxDecoration(
+                            color: c.primary,
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -236,8 +242,8 @@ class _NotificationTile extends StatelessWidget {
                   const SizedBox(height: 3),
                   Text(
                     notification.message,
-                    style: const TextStyle(
-                      color: AppColors.onSurfaceDim,
+                    style: TextStyle(
+                      color: c.onSurfaceDim,
                       fontSize: 13,
                       height: 1.4,
                     ),
@@ -247,10 +253,7 @@ class _NotificationTile extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     _formatDate(notification.createdAt),
-                    style: const TextStyle(
-                      color: AppColors.onSurfaceDim,
-                      fontSize: 11,
-                    ),
+                    style: TextStyle(color: c.onSurfaceDim, fontSize: 11),
                   ),
                 ],
               ),

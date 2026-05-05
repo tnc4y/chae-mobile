@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/context_colors.dart';
 import '../../models/webtoon.dart';
+import '../../providers/settings_provider.dart';
 import '../../services/webtoon_service.dart';
 import 'widgets/featured_banner.dart';
 import 'widgets/section_header.dart';
@@ -49,7 +52,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadLatest() async {
     setState(() => _loadingLatest = true);
     try {
-      final data = await _service.fetchList();
+      final showMature = context.read<SettingsProvider>().matureContent;
+      final data = await _service.fetchList(showMature: showMature);
       if (mounted) setState(() => _latest = data);
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
@@ -58,27 +62,28 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _openWebtoon(Webtoon w) =>
-      context.push('/home/webtoon/${w.slug}');
+  void _openWebtoon(Webtoon w) => context.push('/home/webtoon/${w.slug}');
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: colors.background,
       body: RefreshIndicator(
-        color: AppColors.primary,
-        backgroundColor: AppColors.surfaceContainer,
+        color: colors.primary,
+        backgroundColor: colors.surfaceContainer,
         onRefresh: _loadAll,
         child: CustomScrollView(
           slivers: [
-            _buildAppBar(),
+            _buildAppBar(colors),
             if (_error != null)
-              SliverToBoxAdapter(child: _buildError()),
+              SliverToBoxAdapter(child: _buildError(colors)),
             SliverToBoxAdapter(
               child: Column(
                 children: [
                   const SizedBox(height: 16),
-                  _buildFeaturedSection(),
+                  _buildFeaturedSection(colors),
                   const SizedBox(height: 28),
                   SectionHeader(
                     title: 'Son Güncellenenler',
@@ -89,7 +94,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-            _buildLatestGrid(),
+            _buildLatestGrid(colors),
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
         ),
@@ -97,40 +102,40 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildAppBar() => SliverAppBar(
-    pinned: true,
-    backgroundColor: AppColors.background,
-    title: ShaderMask(
-      shaderCallback: (b) => AppColors.primaryGradient.createShader(b),
-      child: const Text(
-        'Chae',
-        style: TextStyle(
-          fontSize: 26,
-          fontWeight: FontWeight.w900,
-          color: Colors.white,
-          letterSpacing: -1,
+  Widget _buildAppBar(c) => SliverAppBar(
+        pinned: true,
+        backgroundColor: c.background,
+        title: ShaderMask(
+          shaderCallback: (b) => c.primaryGradient.createShader(b),
+          child: const Text(
+            'Chae',
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+              letterSpacing: -1,
+            ),
+          ),
         ),
-      ),
-    ),
-    actions: [
-      IconButton(
-        icon: const Icon(Icons.search_rounded, color: AppColors.onSurface),
-        onPressed: () => context.go('/search'),
-      ),
-      IconButton(
-        icon: const Icon(Icons.notifications_outlined, color: AppColors.onSurface),
-        onPressed: () => context.go('/notifications'),
-      ),
-      const SizedBox(width: 4),
-    ],
-  );
+        actions: [
+          IconButton(
+            icon: Icon(Icons.search_rounded, color: c.onSurface),
+            onPressed: () => context.go('/search'),
+          ),
+          IconButton(
+            icon: Icon(Icons.notifications_outlined, color: c.onSurface),
+            onPressed: () => context.go('/notifications'),
+          ),
+          const SizedBox(width: 4),
+        ],
+      );
 
-  Widget _buildFeaturedSection() {
+  Widget _buildFeaturedSection(c) {
     if (_loadingFeatured) {
-      return const SizedBox(
+      return SizedBox(
         height: 240,
         child: Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
+          child: CircularProgressIndicator(color: c.primary),
         ),
       );
     }
@@ -138,12 +143,12 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
             'Öne Çıkanlar',
             style: TextStyle(
-              color: AppColors.onBackground,
+              color: c.onBackground,
               fontSize: 17,
               fontWeight: FontWeight.w700,
             ),
@@ -155,13 +160,13 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildLatestGrid() {
+  Widget _buildLatestGrid(c) {
     if (_loadingLatest) {
-      return const SliverToBoxAdapter(
+      return SliverToBoxAdapter(
         child: SizedBox(
           height: 200,
           child: Center(
-            child: CircularProgressIndicator(color: AppColors.primary),
+            child: CircularProgressIndicator(color: c.primary),
           ),
         ),
       );
@@ -187,27 +192,28 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildError() => Padding(
-    padding: const EdgeInsets.all(16),
-    child: Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.error.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.error_outline, color: AppColors.error),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Yüklenirken hata oluştu. Çekmek için aşağı kaydır.',
-              style: TextStyle(color: AppColors.error.withValues(alpha: 0.8)),
-            ),
+  Widget _buildError(c) => Padding(
+        padding: const EdgeInsets.all(16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.error.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
           ),
-        ],
-      ),
-    ),
-  );
+          child: Row(
+            children: [
+              const Icon(Icons.error_outline, color: AppColors.error),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Yüklenirken hata oluştu. Çekmek için aşağı kaydır.',
+                  style: TextStyle(
+                      color: AppColors.error.withValues(alpha: 0.8)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
 }

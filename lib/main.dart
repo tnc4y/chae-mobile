@@ -8,6 +8,8 @@ import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/profile_provider.dart';
+import 'providers/settings_provider.dart';
+import 'providers/theme_provider.dart';
 import 'services/revenuecat_service.dart';
 
 Future<void> main() async {
@@ -22,11 +24,27 @@ Future<void> main() async {
     appUserId: Supabase.instance.client.auth.currentUser?.id,
   );
 
-  runApp(const ChaeApp());
+  final themeProvider = ThemeProvider();
+  await themeProvider.initialize();
+
+  final settingsProvider = SettingsProvider();
+  await settingsProvider.initialize();
+
+  runApp(ChaeApp(
+    themeProvider: themeProvider,
+    settingsProvider: settingsProvider,
+  ));
 }
 
 class ChaeApp extends StatelessWidget {
-  const ChaeApp({super.key});
+  final ThemeProvider themeProvider;
+  final SettingsProvider settingsProvider;
+
+  const ChaeApp({
+    super.key,
+    required this.themeProvider,
+    required this.settingsProvider,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -34,12 +52,16 @@ class ChaeApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ProfileProvider()),
+        ChangeNotifierProvider.value(value: themeProvider),
+        ChangeNotifierProvider.value(value: settingsProvider),
       ],
-      child: MaterialApp.router(
-        title: AppConstants.appName,
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.dark,
-        routerConfig: buildRouter(),
+      child: Consumer<ThemeProvider>(
+        builder: (_, tp, __) => MaterialApp.router(
+          title: AppConstants.appName,
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.from(tp.current.palette),
+          routerConfig: buildRouter(),
+        ),
       ),
     );
   }

@@ -1,7 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
-import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/context_colors.dart';
 import '../../../models/webtoon.dart';
 
 class WebtoonCard extends StatelessWidget {
@@ -12,6 +12,8 @@ class WebtoonCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -27,10 +29,10 @@ class WebtoonCard extends StatelessWidget {
                       ? CachedNetworkImage(
                           imageUrl: webtoon.coverUrl!,
                           fit: BoxFit.cover,
-                          placeholder: (_, __) => _shimmer(),
-                          errorWidget: (_, __, ___) => _placeholder(),
+                          placeholder: (_, __) => _shimmer(colors),
+                          errorWidget: (_, __, ___) => _placeholder(colors),
                         )
-                      : _placeholder(),
+                      : _placeholder(colors),
                   if (webtoon.isPremium)
                     Positioned(
                       top: 6,
@@ -41,7 +43,7 @@ class WebtoonCard extends StatelessWidget {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.premium,
+                          color: colors.premium,
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: const Text(
@@ -79,9 +81,9 @@ class WebtoonCard extends StatelessWidget {
                       left: 6,
                       child: Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.star_rounded,
-                            color: AppColors.gold,
+                            color: colors.gold,
                             size: 12,
                           ),
                           const SizedBox(width: 2),
@@ -105,8 +107,8 @@ class WebtoonCard extends StatelessWidget {
             webtoon.title,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: AppColors.onSurface,
+            style: TextStyle(
+              color: colors.onSurface,
               fontSize: 12,
               fontWeight: FontWeight.w500,
               height: 1.3,
@@ -117,8 +119,8 @@ class WebtoonCard extends StatelessWidget {
               webtoon.author!.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppColors.onSurfaceDim,
+              style: TextStyle(
+                color: colors.onSurfaceDim,
                 fontSize: 11,
               ),
             ),
@@ -127,18 +129,18 @@ class WebtoonCard extends StatelessWidget {
     );
   }
 
-  Widget _shimmer() => Shimmer.fromColors(
-    baseColor: AppColors.surfaceContainer,
-    highlightColor: AppColors.surfaceContainerHigh,
-    child: Container(color: AppColors.surfaceContainer),
-  );
+  Widget _shimmer(c) => Shimmer.fromColors(
+        baseColor: c.surfaceContainer,
+        highlightColor: c.surfaceContainerHigh,
+        child: Container(color: c.surfaceContainer),
+      );
 
-  Widget _placeholder() => Container(
-    color: AppColors.surfaceContainer,
-    child: const Icon(
-      Icons.auto_stories_outlined,
-      color: AppColors.outline,
-      size: 40,
-    ),
-  );
+  Widget _placeholder(c) => Container(
+        color: c.surfaceContainer,
+        child: Icon(
+          Icons.auto_stories_outlined,
+          color: c.outline,
+          size: 40,
+        ),
+      );
 }
