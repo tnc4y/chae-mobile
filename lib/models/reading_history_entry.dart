@@ -28,8 +28,8 @@ class ReadingHistoryEntry {
   });
 
   factory ReadingHistoryEntry.fromJson(Map<String, dynamic> json) {
-    final webtoon = json['webtoon'] as Map<String, dynamic>;
-    final chapter = json['chapter'] as Map<String, dynamic>;
+    final webtoon = (json['webtoon'] as Map<String, dynamic>?) ?? {};
+    final chapter = (json['chapter'] as Map<String, dynamic>?) ?? {};
     return ReadingHistoryEntry(
       webtoonId: json['webtoon_id'] as String,
       chapterId: json['chapter_id'] as String,
@@ -37,11 +37,11 @@ class ReadingHistoryEntry {
       progress:
           double.tryParse(json['progress']?.toString() ?? '0') ?? 0,
       lastReadAt: DateTime.parse(json['last_read_at'] as String),
-      webtoonTitle: webtoon['title'] as String,
+      webtoonTitle: webtoon['title'] as String? ?? '',
       webtoonCoverUrl: webtoon['cover_url'] as String?,
-      webtoonSlug: webtoon['slug'] as String,
+      webtoonSlug: webtoon['slug'] as String? ?? '',
       webtoonType: webtoon['type'] as String? ?? 'webtoon',
-      chapterNumber: (chapter['chapter_number'] as num).toInt(),
+      chapterNumber: (chapter['chapter_number'] as num?)?.toInt() ?? 0,
       chapterTitle: chapter['title'] as String?,
       pageCount: (chapter['page_count'] as num?)?.toInt() ?? 0,
     );

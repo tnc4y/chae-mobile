@@ -62,7 +62,7 @@ class Webtoon {
       isPremium: json['is_premium'] as bool? ?? false,
       isFeatured: json['is_featured'] as bool? ?? false,
       releaseDay: json['release_day'] as String?,
-      synopsis: json['synopsis'] as String?,
+      synopsis: (json['synopsis'] ?? json['description']) as String?,
       author: authorRaw is Map<String, dynamic> ? Author.fromJson(authorRaw) : null,
       artist: artistRaw is Map<String, dynamic> ? Author.fromJson(artistRaw) : null,
       genres: genresRaw
