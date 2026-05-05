@@ -3,6 +3,7 @@ import '../core/errors/app_exceptions.dart';
 import '../config/app_constants.dart';
 import '../models/chapter.dart';
 import '../models/chapter_page.dart';
+import '../models/reading_history_entry.dart';
 
 class ChapterService {
   final _client = Supabase.instance.client;
@@ -142,6 +143,35 @@ class ChapterService {
       return data != null;
     } catch (_) {
       return false;
+    }
+  }
+
+  Future<void> incrementChapterView(String chapterId) async {
+    try {
+      await _client.rpc('increment_view', params: {
+        'table_name': 'chapters',
+        'row_id': chapterId,
+      });
+    } catch (_) {}
+  }
+
+  Future<List<ReadingHistoryEntry>> fetchReadingHistory() async {
+    try {
+      final data = await _client
+          .from('reading_history')
+          .select(
+            'webtoon_id, chapter_id, last_page, progress, last_read_at, '
+            'webtoon:webtoons(title, cover_url, slug, type), '
+            'chapter:chapters(chapter_number, title, page_count)',
+          )
+          .eq('user_id', _userId)
+          .order('last_read_at', ascending: false)
+          .limit(50);
+      return (data as List)
+          .map((e) => ReadingHistoryEntry.fromJson(e))
+          .toList();
+    } on PostgrestException catch (e) {
+      throw _mapError(e);
     }
   }
 

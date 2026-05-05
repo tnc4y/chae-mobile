@@ -14,7 +14,6 @@ import '../../models/chapter_page.dart';
 import '../../providers/settings_provider.dart';
 import '../../services/chapter_service.dart';
 import 'widgets/reader_comments_sheet.dart';
-import 'widgets/reader_comments_sheet.dart';
 
 class ReaderScreen extends StatefulWidget {
   final String chapterId;
@@ -85,6 +84,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
     try {
       final pages = await _chapterService.fetchPages(widget.chapterId);
       if (mounted) setState(() => _pages = pages);
+      _chapterService.incrementChapterView(widget.chapterId);
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     } finally {

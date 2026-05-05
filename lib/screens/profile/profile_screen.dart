@@ -479,7 +479,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: Icons.history_rounded,
             label: 'Okuma Geçmişi',
             color: colors.tertiary,
-            onTap: () {},
+            onTap: () => context.push('/reading-history'),
           ),
           Divider(height: 1, color: colors.outlineVariant, indent: 56),
           _MenuItem(

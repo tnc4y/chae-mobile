@@ -12,6 +12,7 @@ import '../../screens/notifications/notifications_screen.dart';
 import '../../screens/profile/profile_screen.dart';
 import '../../screens/webtoon/webtoon_detail_screen.dart';
 import '../../screens/reader/reader_screen.dart';
+import '../../screens/history/reading_history_screen.dart';
 import '../../screens/settings/settings_screen.dart';
 import '../../screens/settings/themes_screen.dart';
 
@@ -62,6 +63,11 @@ GoRouter buildRouter() => GoRouter(
       path: '/settings',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const SettingsScreen(),
+    ),
+    GoRoute(
+      path: '/reading-history',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const ReadingHistoryScreen(),
     ),
     ShellRoute(
       navigatorKey: _shellNavigatorKey,
