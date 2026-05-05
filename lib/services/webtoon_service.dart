@@ -9,7 +9,6 @@ class WebtoonService {
     id, title, slug, cover_url, status, type,
     avg_rating, rating_count, chapter_count,
     view_count, is_premium, is_featured, release_day,
-    author:authors!webtoons_author_id_fkey(id, name),
     webtoon_genres(genre:genres(id, name, color))
   ''';
 
@@ -26,10 +25,8 @@ class WebtoonService {
   }) async {
     try {
       final from = page * 20;
-      var query = _client
-          .from('webtoons')
-          .select(_listSelect)
-          .eq('is_published', true);
+      var query =
+          _client.from('webtoons').select(_listSelect).eq('is_published', true);
       if (!showMature) query = query.eq('is_mature', false);
       final data = await query
           .order('updated_at', ascending: false)
@@ -44,7 +41,8 @@ class WebtoonService {
     try {
       final data = await _client
           .from('webtoons')
-          .select('id, title, slug, cover_url, banner_url, avg_rating, status, type, webtoon_genres(genre:genres(id, name, color))')
+          .select(
+              'id, title, slug, cover_url, banner_url, avg_rating, status, type, webtoon_genres(genre:genres(id, name, color))')
           .eq('is_published', true)
           .eq('is_featured', true)
           .limit(10);
@@ -80,7 +78,8 @@ class WebtoonService {
     try {
       var q = _client
           .from('webtoons')
-          .select('id, title, slug, cover_url, status, type, avg_rating, webtoon_genres(genre:genres(id, name, color))')
+          .select(
+              'id, title, slug, cover_url, status, type, avg_rating, webtoon_genres(genre:genres(id, name, color))')
           .eq('is_published', true)
           .ilike('title', '%$query%');
       if (!showMature) q = q.eq('is_mature', false);
@@ -129,8 +128,9 @@ class WebtoonService {
   }
 
   AppException _mapError(PostgrestException e) => switch (e.code) {
-    'PGRST116' => const NotFoundException('Webtoon bulunamadı'),
-    '42501' => const UnauthorizedException('Bu içeriğe erişim yetkiniz yok'),
-    _ => ServerException(e.message),
-  };
+        'PGRST116' => const NotFoundException('Webtoon bulunamadı'),
+        '42501' =>
+          const UnauthorizedException('Bu içeriğe erişim yetkiniz yok'),
+        _ => ServerException(e.message),
+      };
 }

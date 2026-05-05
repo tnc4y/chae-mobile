@@ -42,7 +42,7 @@ class AppThemes {
 
   static const amoled = AppThemePreset(
     id: 'amoled',
-    name: 'Saf Siyah',
+    name: 'AMOLED',
     isPremium: false,
     palette: AppPalette(
       background: Color(0xFF000000),
@@ -67,7 +67,7 @@ class AppThemes {
     name: 'Mor Gece',
     isPremium: true,
     palette: AppPalette(
-      background: Color(0xFF0D0714),
+      background: Color(0xFF000000),
       surface: Color(0xFF160E22),
       surfaceContainer: Color(0xFF1E1430),
       surfaceContainerHigh: Color(0xFF271A3D),
@@ -89,7 +89,7 @@ class AppThemes {
     name: 'Sakura',
     isPremium: true,
     palette: AppPalette(
-      background: Color(0xFF0F080D),
+      background: Color(0xFF000000),
       surface: Color(0xFF1A0E17),
       surfaceContainer: Color(0xFF241422),
       surfaceContainerHigh: Color(0xFF2E192C),
@@ -111,7 +111,7 @@ class AppThemes {
     name: 'Orman',
     isPremium: true,
     palette: AppPalette(
-      background: Color(0xFF050F08),
+      background: Color(0xFF000000),
       surface: Color(0xFF0A1A0E),
       surfaceContainer: Color(0xFF112415),
       surfaceContainerHigh: Color(0xFF172E1C),
@@ -133,7 +133,7 @@ class AppThemes {
     name: 'Günbatımı',
     isPremium: true,
     palette: AppPalette(
-      background: Color(0xFF100800),
+      background: Color(0xFF000000),
       surface: Color(0xFF1C1000),
       surfaceContainer: Color(0xFF271600),
       surfaceContainerHigh: Color(0xFF321C00),
@@ -155,7 +155,7 @@ class AppThemes {
     name: 'Okyanus',
     isPremium: true,
     palette: AppPalette(
-      background: Color(0xFF020D14),
+      background: Color(0xFF000000),
       surface: Color(0xFF06151F),
       surfaceContainer: Color(0xFF0B1E2D),
       surfaceContainerHigh: Color(0xFF10273A),
@@ -177,7 +177,7 @@ class AppThemes {
     name: 'Kırmızı',
     isPremium: true,
     palette: AppPalette(
-      background: Color(0xFF0F0505),
+      background: Color(0xFF000000),
       surface: Color(0xFF1A0808),
       surfaceContainer: Color(0xFF240C0C),
       surfaceContainerHigh: Color(0xFF2E1010),
@@ -199,7 +199,7 @@ class AppThemes {
     name: 'Gece Mavisi',
     isPremium: true,
     palette: AppPalette(
-      background: Color(0xFF030712),
+      background: Color(0xFF000000),
       surface: Color(0xFF060E1E),
       surfaceContainer: Color(0xFF0C1628),
       surfaceContainerHigh: Color(0xFF111E33),
@@ -221,7 +221,7 @@ class AppThemes {
     name: 'Gül Altını',
     isPremium: true,
     palette: AppPalette(
-      background: Color(0xFF0F0A08),
+      background: Color(0xFF000000),
       surface: Color(0xFF1A1310),
       surfaceContainer: Color(0xFF241C17),
       surfaceContainerHigh: Color(0xFF2E241E),

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -11,6 +13,7 @@ class ThemeProvider extends ChangeNotifier {
 
   AppThemePreset _current = AppThemes.defaultDark;
   bool _premiumUnlocked = false;
+  StreamSubscription<AuthState>? _authSubscription;
 
   AppThemePreset get current => _current;
   bool get premiumUnlocked => _premiumUnlocked;
@@ -18,30 +21,38 @@ class ThemeProvider extends ChangeNotifier {
   Future<void> initialize() async {
     await _loadPremiumStatus();
     await _loadSavedTheme();
+
+    _authSubscription ??=
+        Supabase.instance.client.auth.onAuthStateChange.listen((_) {
+      refreshPremiumStatus();
+    });
   }
 
   Future<void> _loadPremiumStatus() async {
-    // RevenueCat configured → use it as source of truth
+    var premiumByRevenueCat = false;
     if (RevenueCatService.instance.isConfigured) {
       try {
-        _premiumUnlocked = await RevenueCatService.instance.hasPremiumAccess();
-        return;
+        premiumByRevenueCat = await RevenueCatService.instance.hasPremiumAccess();
       } catch (_) {}
     }
-    // Fallback: check Supabase profile role
+
+    var premiumByRole = false;
     try {
       final userId = Supabase.instance.client.auth.currentUser?.id;
-      if (userId == null) return;
-      final row = await Supabase.instance.client
-          .from('profiles')
-          .select('role')
-          .eq('id', userId)
-          .maybeSingle();
-      final role = (row?['role'] as String?) ?? '';
-      _premiumUnlocked = AppConstants.premiumRoles.contains(role);
+      if (userId != null) {
+        final row = await Supabase.instance.client
+            .from('profiles')
+            .select('role')
+            .eq('id', userId)
+            .maybeSingle();
+        final role = (row?['role'] as String?) ?? '';
+        premiumByRole = AppConstants.premiumRoles.contains(role);
+      }
     } catch (_) {
-      _premiumUnlocked = false;
+      premiumByRole = false;
     }
+
+    _premiumUnlocked = premiumByRevenueCat || premiumByRole;
   }
 
   Future<void> _loadSavedTheme() async {
@@ -73,5 +84,11 @@ class ThemeProvider extends ChangeNotifier {
       await prefs.remove(_key);
     }
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
   }
 }
